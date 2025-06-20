@@ -1,0 +1,10 @@
+---
+title: "AcademiABM2 Manuscript"
+author:
+  - name: K.T. Harper
+abstract: "This .qmd produces the manuscript for the academiABM2 model."
+format: 
+  apaquarto-html: default
+---
+
+This is where the manuscript info will go.
