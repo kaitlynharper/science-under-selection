@@ -34,14 +34,15 @@ run_simulation <- function(
   # Calculate total number of agents
   total_agents <- n_agents *
     (floor(n_timesteps / n_timesteps_per_career_step) + 1)
-  agents <- matrix(0, nrow = total_agents, ncol = 5)
+  agents <- matrix(0, nrow = total_agents, ncol = 6)
   # Set column names
   colnames(agents) <- c(
     "researcher_ID",
     "timestep",
     "prob_replicate",
     "career_level",
-    "timesteps_in_career_level"
+    "timesteps_in_career_level",
+    "total_papers"
   )
   # Track current agent
   next_agent_ID <- 1
@@ -69,6 +70,8 @@ run_simulation <- function(
   career_levels <- rep(1:5, length.out = n_agents)
   # Assign timesteps agents have been in current career level
   timesteps_in_career_levels <- sample(1:10, n_agents, replace = TRUE)
+  # Assign 0 papers for initial agents
+  total_papers <- rep(0, n_agents)
 
   # Fill agents matrix with these values
   # Add to matrix
@@ -82,7 +85,8 @@ run_simulation <- function(
       timesteps,
       prob_replicates,
       career_levels,
-      timesteps_in_career_levels
+      timesteps_in_career_levels,
+      total_papers
     )
   # Update next agent ID
   next_agent_ID <- next_agent_ID + length(researcher_IDs)
@@ -161,6 +165,24 @@ run_simulation <- function(
       )
     # Update next paper ID
     next_paper_ID <- next_paper_ID + total_papers_this_timestep
+
+    # Career dynamics
+    if (timestep %% n_timesteps_per_career_step == 0) {
+      # Count papers by agent (excluding null papers with author_ID = 0)
+      valid_papers <- papers[papers[, "author_ID"] != 0, "author_ID"]
+      paper_counts <- table(valid_papers)
+      # Update paper counts for current agents, defaulting to 0
+      current_agents[, "total_papers"] <- paper_counts[as.character(current_agents[, "researcher_ID"])]
+      current_agents[is.na(current_agents[, "total_papers"]), "total_papers"] <- 0
+      # Save current agents to the agents matrix
+      agents[next_agent_index:(next_agent_index + current_n_agents - 1), ] <- current_agents
+      # Update agents matrix index tracker 
+      next_agent_index <- next_agent_index + current_n_agents
+      # Retire some agents
+      # Fill each career level by choosing agents beneath based on metrics
+      # Generate new agents to fill lowest level
+      # ^ Remember to update next_agent_ID when doing this
+    }
   }
 
   # Return list of results with papers
