@@ -18,12 +18,18 @@ profvis_profile <- profvis({
   results <<- run_simulation(
     n_agents = 10000,
     n_timesteps = 100,
+    n_timesteps_per_career_step = 10,
     papers_per_agent_per_timestep = 2
   )
 })
 
 # Memory usage of results
 cat("=== MEMORY USAGE ===\n")
-cat("Papers matrix:", object_size(results), "bytes\n")
+cat("Papers matrix:", object_size(results$papers), "bytes\n")
+cat("Agents matrix:", object_size(results$agents), "bytes\n")
 
+# Open profvis profile
 print(profvis_profile)
+
+# Debugging option
+# debugonce(run_simulation)
