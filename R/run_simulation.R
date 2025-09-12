@@ -19,7 +19,7 @@ profvis_profile <- profvis({
     n_agents = 10000,
     n_timesteps = 100,
     n_timesteps_per_career_step = 10,
-    papers_per_agent_per_timestep = 2
+    mean_papers_per_agent_per_timestep = 2
   )
 })
 
