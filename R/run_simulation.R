@@ -6,7 +6,8 @@
 ##############################################################################
 
 # Source model files
-source("R/functions.R")
+function_files = list.files("R/functions/", full.names = TRUE)
+sapply(function_files, source, .GlobalEnv)
 source("R/model.R")
 
 # Load required packages
