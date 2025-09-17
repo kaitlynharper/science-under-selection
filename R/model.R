@@ -12,29 +12,20 @@ run_simulation <- function(
   mean_papers_per_agent_per_timestep
 ) {
   #### Initialize model ####
+
+  # Initialize empty papers matrix
   papers <- initialize_papers_matrix(
     n_agents,
     n_timesteps,
     mean_papers_per_agent_per_timestep
   )
 
-  #Initialize matrix of agents
-  # Calculate total number of agents
-  total_agents <- n_agents *
-    (floor(n_timesteps / n_timesteps_per_career_step) + 1)
-  agents <- matrix(0, nrow = total_agents, ncol = 6)
-  # Set column names
-  colnames(agents) <- c(
-    "researcher_ID",
-    "timestep",
-    "prob_replicate",
-    "career_level",
-    "timesteps_in_career_level",
-    "total_papers"
+  # Initialize empty agents matrix
+  agents <- initialize_agents_matrix(
+    n_agents,
+    n_timesteps,
+    n_timesteps_per_career_step
   )
-  # Track current agent
-  next_agent_ID <- 1
-  next_agent_index <- 1
 
   # Generate initial population of agents
   # Set up initial current_agents
