@@ -12,23 +12,11 @@ run_simulation <- function(
   mean_papers_per_agent_per_timestep
 ) {
   #### Initialize model ####
-  #Initialize matrix of papers
-  # Calculate total number of papers
-  total_papers <- n_agents * n_timesteps * (mean_papers_per_agent_per_timestep+1)
-  papers <- matrix(0, nrow = total_papers, ncol = 8)
-  # Set column names
-  colnames(papers) <- c(
-    "paper_ID",
-    "timestep",
-    "author_ID",
-    "hypothesis_ID",
-    "estimated_m",
-    "estimated_se",
-    "verisimilitude_gain",
-    "information_gain"
+  papers <- initialize_papers_matrix(
+    n_agents,
+    n_timesteps,
+    mean_papers_per_agent_per_timestep
   )
-  # Track current paper (ID and index should be the same for papers throughout)
-  next_paper_ID <- 1
 
   #Initialize matrix of agents
   # Calculate total number of agents
