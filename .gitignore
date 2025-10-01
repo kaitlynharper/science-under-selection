@@ -50,3 +50,6 @@ output/
 
 # MacOS system files
 .DS_store
+
+# Preregistration folder
+preregistration/
