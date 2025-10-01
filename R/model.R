@@ -109,14 +109,23 @@ run_simulation <- function(
 
     # Career dynamics
     if (timestep %% n_timesteps_per_career_step == 0) {
-      # Count papers by agent (excluding null papers with author_ID = 0)
-      valid_papers <- papers[papers[, "author_ID"] != 0, "author_ID"]
-      paper_counts <- table(valid_papers)
-      # Update paper counts for current agents, defaulting to 0
-      current_agents[, "total_papers"] <- paper_counts[as.character(current_agents[, "researcher_ID"])]
-      current_agents[is.na(current_agents[, "total_papers"]), "total_papers"] <- 0
+      # Count papers by agent
+      if (next_paper_ID > 1) {
+        # Extract author IDs from filled rows
+        author_ids <- papers[1:(next_paper_ID - 1), "author_ID"]
+        # Count papers per author using tabulate
+        all_counts <- tabulate(author_ids)
+        # Map counts to current agents (0 for agents with no papers)
+        current_agents[, "total_papers"] <- all_counts[current_agents[, "researcher_ID"]]
+        current_agents[is.na(current_agents[, "total_papers"]), "total_papers"] <- 0
+      } else {
+        # No papers yet, all counts are 0
+        current_agents[, "total_papers"] <- 0
+      }
       # Save current agents to the agents matrix
-      agents[next_agent_index:(next_agent_index + current_n_agents - 1), ] <- current_agents
+      agents[
+        next_agent_index:(next_agent_index + current_n_agents - 1),
+      ] <- current_agents
       # Update agents matrix index tracker 
       next_agent_index <- next_agent_index + current_n_agents
       # Retire some agents
