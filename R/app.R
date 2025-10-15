@@ -237,15 +237,17 @@ server <- function(input, output, session) {
 
     # Format results with all metrics
     sprintf(
-      "%s\n\n%s\n\n%s\n\n%s",
+      "%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s",
+      paste0("Posterior mean: ", round(posterior_mean, 3)),
+      paste0("Posterior sd: ", round(posterior_sd, 3)),
       paste0("Prior verisimilitude: ", round(kl_prior_to_true, 3)),
       paste0("Posterior verisimilitude: ", round(kl_posterior_to_true, 3)),
       paste0(
-        "True contribution (verisimilitude gain): ",
+        "Truth contribution (verisimilitude gain): ",
         round(verisimilitude_change, 3)
       ),
       paste0(
-        "Perceived contribution (information gain): ",
+        "Novelty contribution (information gain): ",
         round(information_gain, 3)
       )
     )
