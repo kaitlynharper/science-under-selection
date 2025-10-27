@@ -1,8 +1,8 @@
 ---
-title: "AcademiABM2 Manuscript"
+title: "Manuscript"
 author:
   - name: K.T. Harper
-abstract: "This .qmd produces the manuscript for the academiABM2 model."
+abstract: "This .qmd produces the manuscript for the model."
 format: 
   apaquarto-html: default
 ---
