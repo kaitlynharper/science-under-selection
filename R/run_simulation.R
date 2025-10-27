@@ -5,10 +5,13 @@
 # academiABM2 simulations
 ##############################################################################
 
-# Source model files
-function_files = list.files("R/functions/", full.names = TRUE)
+# Load required packages
+library(here) # For robust project-relative paths
+
+# Source model files (incl all function files)
+function_files = list.files(here("R", "functions"), full.names = TRUE)
 sapply(function_files, source, .GlobalEnv)
-source("R/model.R")
+source(here("R", "model.R"))
 
 # Load required packages
 library(pryr) # For memory usage tracking
