@@ -141,3 +141,17 @@ run_simulation <- function(
     agents = agents
   ))
 }
+
+#### Run model within script for easier debugging ####
+# library(here)
+# # Source function files
+# function_files = list.files(here("R", "functions"), full.names = TRUE)
+# sapply(function_files, source, .GlobalEnv)
+# results <- run_simulation(
+#   n_agents = 5,
+#   n_timesteps = 20,
+#   n_timesteps_per_career_step = 10,
+#   mean_papers_per_agent_per_timestep = 2
+# )
+# View(results$agents)
+# View(results$papers)
