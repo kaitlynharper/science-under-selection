@@ -34,10 +34,10 @@ run_simulation <- function(
 
   #### Timestep loop ####
   for (timestep in 0:n_timesteps) {
-    # Update timestep info for current_agents
+    # Update timestep for current_agents
     current_agents[, "timestep"] <- timestep
 
-    # Save current agent info
+    # Save current agent info for easy access later
     current_n_agents <- nrow(current_agents)
     current_researcher_ids <- current_agents[, "researcher_id"]
 
@@ -46,18 +46,19 @@ run_simulation <- function(
       current_n_agents,
       mean_studies_per_agent_per_timestep
     )
+    # Calculate total number of studies
     total_studies_this_timestep <- sum(studies_per_agent)
 
-    # Generate list of author IDs
+    # Generate list of author ids
     researcher_ids <- rep(current_researcher_ids, studies_per_agent)
 
     # Generate timestep list
     timesteps_completed <- rep(timestep, total_studies_this_timestep)
 
-    # Generate study IDs
+    # Generate study ids
     study_ids <- next_study_id:(next_study_id + total_studies_this_timestep - 1)
 
-    # Generate effect IDs
+    # Sample effect ids
     effect_ids <- sample(
       1:100000,
       total_studies_this_timestep,
@@ -105,7 +106,7 @@ run_simulation <- function(
       0.1
     )
 
-    # Initialize publication status (0 = not published, 1 = published)
+    # Set publication status (0 = not published, 1 = published)
     publication_statuses <- rep(0, total_studies_this_timestep)
 
     # Add to matrix
@@ -125,10 +126,10 @@ run_simulation <- function(
         truth_contributions,
         publication_statuses
       )
-    # Update next study ID
+    # Update next study id tracker
     next_study_id <- next_study_id + total_studies_this_timestep
 
-    # Career dynamics
+    # Career turnover phase
     if (timestep %% n_timesteps_per_career_step == 0) {
       # Save current agents to the agents matrix
       agents[
@@ -136,30 +137,29 @@ run_simulation <- function(
       ] <- current_agents
       # Update agents matrix index tracker
       next_agent_index <- next_agent_index + current_n_agents
-      # Retire some agents
-      # Fill each career level by choosing agents beneath based on metrics
-      # Generate new agents to fill lowest level
-      # ^ Remember to update next_agent_ID when doing this
+      # Retire set % of agents based on novelty or truth contributions
+      # Generate new agents to fill lowest level (sample existing trait values + noise)
+      # ^ Remember to update next_agent_id when doing this
     }
   }
 
-  # Return list of results with studies
+  # Return list of results (eventually will also output effects matrix)
   return(list(
     studies = studies,
     agents = agents
   ))
 }
 
-### Run model within script for easier debugging ####
-library(here)
-# Source function files
-function_files = list.files(here("R", "functions"), full.names = TRUE)
-sapply(function_files, source, .GlobalEnv)
-results <- run_simulation(
-  n_agents = 5,
-  n_timesteps = 20,
-  n_timesteps_per_career_step = 10,
-  mean_studies_per_agent_per_timestep = 2
-)
-View(results$agents)
-View(results$studies)
+# ### Option to run model within script for easier debugging ####
+# library(here)
+# # Source function files
+# function_files = list.files(here("R", "functions"), full.names = TRUE)
+# sapply(function_files, source, .GlobalEnv)
+# results <- run_simulation(
+#   n_agents = 5,
+#   n_timesteps = 20,
+#   n_timesteps_per_career_step = 10,
+#   mean_studies_per_agent_per_timestep = 2
+# )
+# View(results$agents)
+# View(results$studies)

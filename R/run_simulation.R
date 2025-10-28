@@ -6,16 +6,14 @@
 ##############################################################################
 
 # Load required packages
-library(here) # For robust project-relative paths
-
-# Source model files (incl all function files)
-function_files = list.files(here("R", "functions"), full.names = TRUE)
-sapply(function_files, source, .GlobalEnv)
-source(here("R", "model.R"))
-
-# Load required packages
+library(here) # relative paths
 library(pryr) # For memory usage tracking
 library(profvis) # For performance profiling
+
+# Source model files (incl all function files)
+function_files <- list.files(here("R", "functions"), full.names = TRUE)
+sapply(function_files, source, .GlobalEnv)
+source(here("R", "model.R"))
 
 # Run simulation and track memory and runtime
 profvis_profile <- profvis({
@@ -31,9 +29,11 @@ profvis_profile <- profvis({
 cat("=== MEMORY USAGE ===\n")
 cat("Studies matrix:", object_size(results$studies), "bytes\n")
 cat("Agents matrix:", object_size(results$agents), "bytes\n")
-
+# Display model output
+View(results$agents)
+View(results$studies)
 # Open profvis profile
 print(profvis_profile)
 
-# Debugging option
+# Positron debugging option
 # debugonce(run_simulation)

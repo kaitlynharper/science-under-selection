@@ -11,16 +11,16 @@ generate_initial_agents <- function(n_agents) {
     "target_power",
     "career_status"
   )
-  # Generate IDs
-  researcher_ids <- next_agent_ID:(next_agent_ID + n_agents - 1)
+  # Generate ids
+  researcher_ids <- next_agent_id:(next_agent_id + n_agents - 1)
   # Set timestep
   timesteps <- rep(0, n_agents)
   # Generate replication_probability (between 0 and 1)
   replication_probabilities <- pmax(0, pmin(1, rnorm(n_agents, 0.5, 0.5)))
   # Generate target_power (between 0 and 1)
   target_powers <- pmax(0, pmin(1, rnorm(n_agents, 0.8, 0.1)))
-  # Initialize career_status (0 = active, 1 = inactive)
-  career_statuses <- rep(0, n_agents)
+  # Initialize career_status (0 = inactive, 1 = active)
+  career_statuses <- rep(1, n_agents)
 
   # Fill agents matrix with these values
   # Add to matrix
@@ -36,7 +36,7 @@ generate_initial_agents <- function(n_agents) {
       target_powers,
       career_statuses
     )
-  # Update next agent ID
-  next_agent_ID <<- next_agent_ID + length(researcher_ids)
+  # Update next agent id
+  next_agent_id <<- next_agent_id + length(researcher_ids)
   return(current_agents)
 }
