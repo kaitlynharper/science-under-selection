@@ -9,15 +9,15 @@ run_simulation <- function(
   n_agents,
   n_timesteps,
   n_timesteps_per_career_step,
-  mean_papers_per_agent_per_timestep
+  mean_studies_per_agent_per_timestep
 ) {
   #### Initialize model ####
 
-  # Initialize empty papers matrix
-  papers <- initialize_papers_matrix(
+  # Initialize empty studies matrix
+  studies <- initialize_studies_matrix(
     n_agents,
     n_timesteps,
-    mean_papers_per_agent_per_timestep
+    mean_studies_per_agent_per_timestep
   )
 
   # Initialize empty agents matrix
@@ -41,76 +41,76 @@ run_simulation <- function(
     current_n_agents <- nrow(current_agents)
     current_researcher_ids <- current_agents[, "researcher_id"]
 
-    # Decide how many papers for each agent using Poisson distribution
-    papers_per_agent <- rpois(
+    # Decide how many studies for each agent using Poisson distribution
+    studies_per_agent <- rpois(
       current_n_agents,
-      mean_papers_per_agent_per_timestep
+      mean_studies_per_agent_per_timestep
     )
-    total_papers_this_timestep <- sum(papers_per_agent)
+    total_studies_this_timestep <- sum(studies_per_agent)
 
     # Generate list of author IDs
-    researcher_ids <- rep(current_researcher_ids, papers_per_agent)
+    researcher_ids <- rep(current_researcher_ids, studies_per_agent)
 
     # Generate timestep list
-    timesteps_completed <- rep(timestep, total_papers_this_timestep)
+    timesteps_completed <- rep(timestep, total_studies_this_timestep)
 
     # Generate study IDs
-    study_ids <- next_paper_ID:(next_paper_ID + total_papers_this_timestep - 1)
+    study_ids <- next_study_id:(next_study_id + total_studies_this_timestep - 1)
 
     # Generate effect IDs
     effect_ids <- sample(
       1:100000,
-      total_papers_this_timestep,
+      total_studies_this_timestep,
       replace = FALSE
     )
 
     # Generate sample size values
     sample_sizes <- rpois(
-      total_papers_this_timestep,
+      total_studies_this_timestep,
       100
     )
 
     # Generate effect size values
     estimated_means <- rnorm(
-      total_papers_this_timestep,
+      total_studies_this_timestep,
       0.5,
       0.2
     )
 
     # Generate SE values
     estimated_standard_errors <- abs(rnorm(
-      total_papers_this_timestep,
+      total_studies_this_timestep,
       0.1,
       0.05
     ))
 
     # Generate p-values
     p_values <- runif(
-      total_papers_this_timestep,
+      total_studies_this_timestep,
       0,
       1
     )
 
     # Generate novelty contribution
     novelty_contributions <- rnorm(
-      total_papers_this_timestep,
+      total_studies_this_timestep,
       0.2,
       0.1
     )
 
     # Generate truth contribution
     truth_contributions <- rnorm(
-      total_papers_this_timestep,
+      total_studies_this_timestep,
       0.3,
       0.1
     )
 
     # Initialize publication status (0 = not published, 1 = published)
-    publication_statuses <- rep(0, total_papers_this_timestep)
+    publication_statuses <- rep(0, total_studies_this_timestep)
 
     # Add to matrix
-    papers[
-      next_paper_ID:(next_paper_ID + total_papers_this_timestep - 1),
+    studies[
+      next_study_id:(next_study_id + total_studies_this_timestep - 1),
     ] <-
       cbind(
         study_ids,
@@ -125,8 +125,8 @@ run_simulation <- function(
         truth_contributions,
         publication_statuses
       )
-    # Update next paper ID
-    next_paper_ID <- next_paper_ID + total_papers_this_timestep
+    # Update next study ID
+    next_study_id <- next_study_id + total_studies_this_timestep
 
     # Career dynamics
     if (timestep %% n_timesteps_per_career_step == 0) {
@@ -143,23 +143,23 @@ run_simulation <- function(
     }
   }
 
-  # Return list of results with papers
+  # Return list of results with studies
   return(list(
-    papers = papers,
+    studies = studies,
     agents = agents
   ))
 }
 
-#### Run model within script for easier debugging ####
-# library(here)
-# # Source function files
-# function_files = list.files(here("R", "functions"), full.names = TRUE)
-# sapply(function_files, source, .GlobalEnv)
-# results <- run_simulation(
-#   n_agents = 5,
-#   n_timesteps = 20,
-#   n_timesteps_per_career_step = 10,
-#   mean_papers_per_agent_per_timestep = 2
-# )
-# View(results$agents)
-# View(results$papers)
+### Run model within script for easier debugging ####
+library(here)
+# Source function files
+function_files = list.files(here("R", "functions"), full.names = TRUE)
+sapply(function_files, source, .GlobalEnv)
+results <- run_simulation(
+  n_agents = 5,
+  n_timesteps = 20,
+  n_timesteps_per_career_step = 10,
+  mean_studies_per_agent_per_timestep = 2
+)
+View(results$agents)
+View(results$studies)
