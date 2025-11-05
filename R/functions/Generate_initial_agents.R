@@ -16,12 +16,11 @@ generate_initial_agents <- function(n_agents) {
   # Set timestep
   timesteps <- rep(0, n_agents)
   # Generate replication_probability (between 0 and 1)
-  replication_probabilities <- pmax(0, pmin(1, rnorm(n_agents, 0.5, 0.5)))
+  replication_probabilities <- pmax(0, pmin(1, runif(n_agents, 0, 1)))
   # Generate target_power (between 0 and 1)
-  target_powers <- pmax(0, pmin(1, rnorm(n_agents, 0.8, 0.1)))
+  target_powers <- pmax(0, pmin(1, runif(n_agents, 0, 1)))
   # Initialize career_status (0 = inactive, 1 = active)
   career_statuses <- rep(1, n_agents)
-
   # Fill agents matrix with these values
   # Add to matrix
   current_agents[
