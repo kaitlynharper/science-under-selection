@@ -9,9 +9,25 @@ run_simulation <- function(
   n_agents,
   n_timesteps,
   n_timesteps_per_career_step,
+  n_effects,
+  base_null_probability,
+  effect_size_mean,
+  effect_size_variance,
+  uninformed_prior_mean,
+  uninformed_prior_variance,
   mean_studies_per_agent_per_timestep
 ) {
   #### Initialize model ####
+
+  # Initialize effects matrix
+  effects <- initialize_effects_matrix(
+    n_effects,
+    base_null_probability,
+    effect_size_mean,
+    effect_size_variance,
+    uninformed_prior_mean,
+    uninformed_prior_variance
+  )
 
   # Initialize empty studies matrix
   studies <- initialize_studies_matrix(

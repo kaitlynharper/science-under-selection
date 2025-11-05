@@ -9,6 +9,8 @@
 library(here) # relative paths
 library(pryr) # For memory usage tracking
 library(profvis) # For performance profiling
+library(tidyr)
+library(dplyr)
 
 # Source model files (incl all function files)
 function_files <- list.files(here("R", "functions"), full.names = TRUE)
@@ -21,6 +23,12 @@ profvis_profile <- profvis({
     n_agents = 10000,
     n_timesteps = 100,
     n_timesteps_per_career_step = 10,
+    n_effects = 10,
+    base_null_probability = 0.1,
+    effect_size_mean = 0.3,
+    effect_size_variance = 0.1,
+    uninformed_prior_mean = 0,
+    uninformed_prior_variance = 1,
     mean_studies_per_agent_per_timestep = 2
   )
 })
@@ -32,6 +40,7 @@ cat("Agents matrix:", object_size(results$agents), "bytes\n")
 # Display model output
 View(results$agents)
 View(results$studies)
+View(results$effects)
 # Open profvis profile
 print(profvis_profile)
 
