@@ -9,14 +9,15 @@ initialize_agents_matrix <- function(
   # Calculate total number of agents (recording agents each career step)
   total_agents <- n_agents *
     (floor(n_timesteps / n_timesteps_per_career_step) + 1)
-  agents <- matrix(0, nrow = total_agents, ncol = 5)
+  agents <- matrix(0, nrow = total_agents, ncol = 6)
   # Set column names
   colnames(agents) <- c(
     "researcher_id",
     "timestep",
     "replication_probability",
     "target_power",
-    "career_status"
+    "career_status",
+    "timestep_next_paper"
   )
   # Track current agent
   next_agent_id <<- 1

@@ -2,14 +2,15 @@
 
 generate_initial_agents <- function(n_agents) {
   # Set up initial current_agents
-  current_agents <- matrix(0, nrow = n_agents, ncol = 5)
+  current_agents <- matrix(0, nrow = n_agents, ncol = 6)
   # Set column names
   colnames(current_agents) <- c(
     "researcher_id",
     "timestep",
     "replication_probability",
     "target_power",
-    "career_status"
+    "career_status",
+    "timestep_next_paper"
   )
   # Generate ids
   researcher_ids <- next_agent_id:(next_agent_id + n_agents - 1)
@@ -21,6 +22,8 @@ generate_initial_agents <- function(n_agents) {
   target_powers <- pmax(0, pmin(1, runif(n_agents, 0, 1)))
   # Initialize career_status (0 = inactive, 1 = active)
   career_statuses <- rep(1, n_agents)
+  # Initialize timestep_next_paper (0 = ready to start a new paper)
+  timestep_next_papers <- rep(0, n_agents)
   # Fill agents matrix with these values
   # Add to matrix
   current_agents[
@@ -33,7 +36,8 @@ generate_initial_agents <- function(n_agents) {
       timesteps,
       replication_probabilities,
       target_powers,
-      career_statuses
+      career_statuses,
+      timestep_next_papers
     )
   # Update next agent id
   next_agent_id <<- next_agent_id + length(researcher_ids)
