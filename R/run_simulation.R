@@ -17,21 +17,24 @@ function_files <- list.files(here("R", "functions"), full.names = TRUE)
 sapply(function_files, source, .GlobalEnv)
 source(here("R", "model.R"))
 
+# Define simulation parameters
+params <- list(
+  n_agents = 10,
+  n_timesteps = 10,
+  n_timesteps_per_career_step = 10,
+  n_effects = 50,
+  base_null_probability = 0.1,
+  effect_size_mean = 0.3,
+  effect_size_variance = 0.1,
+  uninformed_prior_mean = 0,
+  uninformed_prior_variance = 1,
+  mean_studies_per_agent_per_timestep = 2 # TODO remove once real studies are implemented
+)
+
 # Run simulation and track memory and runtime
-profvis_profile <- profvis({
-  results <<- run_simulation(
-    n_agents = 10000,
-    n_timesteps = 100,
-    n_timesteps_per_career_step = 10,
-    n_effects = 10,
-    base_null_probability = 0.1,
-    effect_size_mean = 0.3,
-    effect_size_variance = 0.1,
-    uninformed_prior_mean = 0,
-    uninformed_prior_variance = 1,
-    mean_studies_per_agent_per_timestep = 2
-  )
-})
+#profvis_profile <- profvis({
+  results <- run_simulation(params)
+#})
 
 # Memory usage of results
 cat("=== MEMORY USAGE ===\n")
