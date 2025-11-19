@@ -40,16 +40,21 @@ run_simulation <- function(params) {
     sim_env$n_timesteps_per_career_step
   )
 
-  # Generate initial population of agents
-  sim_env$current_agents <- generate_initial_agents(
-    sim_env$n_agents
-  )
-  
-  # Initialize trackers (TODO move to dynamic id/index allocation system)
+  # Initialize trackers
   sim_env$next_study_id <- 1
-  sim_env$next_agent_id <- sim_env$n_agents + 1
+  sim_env$next_agent_id <- 1
   sim_env$next_agent_index <- 1
   sim_env$timestep <- 0
+
+  # Generate initial population of agents
+  add_agents(
+    sim_env = sim_env,
+    n_agents = sim_env$n_agents,
+    timestep_active = 0,
+    replication_probabilities = runif(sim_env$n_agents, 0, 1),
+    target_powers = runif(sim_env$n_agents, 0, 1),
+    timestep_next_papers = rep(0, sim_env$n_agents)
+  )
 
   #### Timestep loop ####
   for (timestep in 0:sim_env$n_timesteps) {
