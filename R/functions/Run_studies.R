@@ -1,16 +1,16 @@
 #### Function: run_studies ####
 
-run_studies <- function(agents, effects, studies, timestep, next_study_id) {
+run_studies <- function(sim_env) {
   # Identify agents who are ready to start a new study and are active
   # grab their researcher_id, replication_probability, and target_power
-  browser() #debug
-  ready_agents <- agents[
-    agents[, "timestep_next_paper"] == timestep,
+  browser() #debug point
+  ready_agents <- sim_env$current_agents[
+    sim_env$current_agents[, "timestep_next_paper"] == sim_env$timestep,
     c("researcher_id", "replication_probability", "target_power"),
     drop = FALSE
   ]
   n_studies <- nrow(ready_agents)
-  # return NULL if no agents are ready
+  # return NULL if no agents are ready (TODO revisit this once output is finalised)
   if (n_studies == 0) {
     return(NULL)
   }
@@ -18,7 +18,7 @@ run_studies <- function(agents, effects, studies, timestep, next_study_id) {
   # Add columns to make a new studies matrix
   new_studies <- cbind(
     ready_agents,
-    study_id = next_study_id:(next_study_id + n_studies - 1),
+    study_id = sim_env$next_study_id:(sim_env$next_study_id + n_studies - 1),
     effect_id = rep(NA, n_studies),
     study_type = rep(NA, n_studies),
     sample_size = rep(NA, n_studies),
@@ -26,24 +26,30 @@ run_studies <- function(agents, effects, studies, timestep, next_study_id) {
     estimated_se = rep(NA, n_studies),
     p_value = rep(NA, n_studies)
   )
-  # update next_study_id
-  next_study_id <<- next_study_id + n_studies
+  # Update next_study_id tracker
+  sim_env$next_study_id <- sim_env$next_study_id + n_studies
 
   # Determine study types
   # Determine original or replication based on each agent's replication_probability
   is_replication <- runif(n_studies) < new_studies[, "replication_probability"]
   new_studies[, "study_type"] <- ifelse(is_replication, "1", "0")
   # Identify available effect_IDs for original studies
-  available_original_effects <- effects[
-    !effects[, "effect_id"] %in%
-      studies[studies[, "publication_status"] == 1, "effect_id"],
+  available_original_effects <- sim_env$effects[
+    !sim_env$effects[, "effect_id"] %in%
+      sim_env$studies[
+        sim_env$studies[, "publication_status"] == 1,
+        "effect_id"
+      ],
     "effect_id"
   ]
-  # Identify available effect_IDs for replication studies
-  available_replication_effects <- unique(studies[
-    studies[, "publication_status"] == 1,
+  # Identify available effect_IDs for replication studies (TODO order by number of replications, but can do more than one replication)
+  available_replication_effects <- unique(sim_env$studies[
+    sim_env$studies[, "publication_status"] == 1,
     "effect_id"
   ])
+
+  # allow multiple replications per paper but not within same timestep (and track how often agents don't get what they wanted)
+
   # If there are enough available effect_IDs for replication, go ahead, otherwise reassign agents to original studies
   if (sum(is_replication) > length(available_replication_effects)) {
     # turn the excess replications with the lowest replication_probability into original studies

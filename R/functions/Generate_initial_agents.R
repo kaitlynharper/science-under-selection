@@ -12,8 +12,8 @@ generate_initial_agents <- function(n_agents) {
     "career_status",
     "timestep_next_paper"
   )
-  # Generate ids
-  researcher_ids <- next_agent_id:(next_agent_id + n_agents - 1)
+  # Generate ids (starts at 1 for initial population)
+  researcher_ids <- 1:n_agents
   # Set timestep
   timesteps <- rep(0, n_agents)
   # Generate replication_probability (between 0 and 1)
@@ -25,21 +25,13 @@ generate_initial_agents <- function(n_agents) {
   # Initialize timestep_next_paper (0 = ready to start a new paper)
   timestep_next_papers <- rep(0, n_agents)
   # Fill agents matrix with these values
-  # Add to matrix
-  current_agents[
-    next_agent_index:(next_agent_index +
-      (length(researcher_ids)) -
-      1),
-  ] <-
-    cbind(
-      researcher_ids,
-      timesteps,
-      replication_probabilities,
-      target_powers,
-      career_statuses,
-      timestep_next_papers
-    )
-  # Update next agent id
-  next_agent_id <<- next_agent_id + length(researcher_ids)
+  current_agents[] <- cbind(
+    researcher_ids,
+    timesteps,
+    replication_probabilities,
+    target_powers,
+    career_statuses,
+    timestep_next_papers
+  )
   return(current_agents)
 }

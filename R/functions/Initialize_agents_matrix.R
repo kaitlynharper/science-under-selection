@@ -19,8 +19,5 @@ initialize_agents_matrix <- function(
     "career_status",
     "timestep_next_paper"
   )
-  # Track current agent
-  next_agent_id <<- 1
-  next_agent_index <<- 1
   return(agents)
 }

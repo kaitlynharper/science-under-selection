@@ -25,7 +25,5 @@ initialize_studies_matrix <- function(
     "truth_contribution",
     "publication_status"
   )
-  # Track current study (id and index should be the same for studies throughout)
-  next_study_id <<- 1
   return(studies)
 }
