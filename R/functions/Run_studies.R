@@ -2,10 +2,17 @@
 
 run_studies <- function(sim_env) {
   # Identify agents who are ready to start a new study and are active
-  # grab their researcher_id, replication_probability, and target_power
   browser() #debug point
-  ready_agents <- sim_env$current_agents[
-    sim_env$current_agents[, "timestep_next_paper"] == sim_env$timestep,
+
+  # Filter for active agents who are ready to start a new paper
+  ready_indices <- which(
+    !is.na(sim_env$agents[, "researcher_id"]) &
+      is.na(sim_env$agents[, "timestep_inactive"]) &
+      sim_env$agents[, "timestep_next_paper"] == sim_env$timestep
+  )
+
+  ready_agents <- sim_env$agents[
+    ready_indices,
     c("researcher_id", "replication_probability", "target_power"),
     drop = FALSE
   ]
@@ -21,10 +28,14 @@ run_studies <- function(sim_env) {
     study_id = sim_env$next_study_id:(sim_env$next_study_id + n_studies - 1),
     effect_id = rep(NA, n_studies),
     study_type = rep(NA, n_studies),
+    timestep_completed = rep(NA, n_studies),
     sample_size = rep(NA, n_studies),
     estimated_mean = rep(NA, n_studies),
     estimated_se = rep(NA, n_studies),
-    p_value = rep(NA, n_studies)
+    p_value = rep(NA, n_studies),
+    novelty_contribution = rep(NA, n_studies),
+    truth_contribution = rep(NA, n_studies),
+    publication_status = rep(NA, n_studies)
   )
   # Update next_study_id tracker
   sim_env$next_study_id <- sim_env$next_study_id + n_studies
@@ -32,7 +43,7 @@ run_studies <- function(sim_env) {
   # Determine study types
   # Determine original or replication based on each agent's replication_probability
   is_replication <- runif(n_studies) < new_studies[, "replication_probability"]
-  new_studies[, "study_type"] <- ifelse(is_replication, "1", "0")
+  new_studies[, "study_type"] <- ifelse(is_replication, 1, 0)
   # Identify available effect_IDs for original studies
   available_original_effects <- sim_env$effects[
     !sim_env$effects[, "effect_id"] %in%
@@ -60,7 +71,7 @@ run_studies <- function(sim_env) {
       "replication_probability"
     ])[1:excess_replications]]
     is_replication[convert_indices] <- FALSE #update logical indexing
-    new_studies[convert_indices, "study_type"] <- "original" #update study type
+    new_studies[convert_indices, "study_type"] <- 0 #update study type
   }
 
   # Assign effect_IDs to agents for original studies from available effect_IDs (without replacement)

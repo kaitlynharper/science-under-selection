@@ -61,25 +61,12 @@ run_simulation <- function(params) {
     # Update timestep tracker in the environment
     sim_env$timestep <- timestep
     
-    # Update timestep for current_agents
-    sim_env$current_agents[, "timestep"] <- sim_env$timestep
-
-    # Save current agent info for easy access later
-    current_n_agents <- nrow(sim_env$current_agents)
-    current_researcher_ids <- sim_env$current_agents[, "researcher_id"]
-    
     # Run actual studies
     output <- run_studies(sim_env)
 
     # Career turnover phase
     if (sim_env$timestep %% sim_env$n_timesteps_per_career_step == 0) {
       # TODO Don't select on the first career phase studies, wait out the weird effects
-      # Save current agents to the agents matrix
-      sim_env$agents[
-        sim_env$next_agent_index:(sim_env$next_agent_index + current_n_agents - 1),
-      ] <- sim_env$current_agents
-      # Update agents matrix index tracker
-      sim_env$next_agent_index <- sim_env$next_agent_index + current_n_agents
       # Retire set % of agents based on novelty or truth contributions
       # Generate new agents to fill lowest level (sample existing trait values + noise)
       # ^ Remember to update next_agent_id when doing this
