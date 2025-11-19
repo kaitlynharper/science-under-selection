@@ -22,10 +22,18 @@ run_studies <- function(sim_env) {
     return(NULL)
   }
 
+  # Generate new study IDs (max + 1)
+  existing_study_ids <- sim_env$studies[, "study_id"]
+  if (all(is.na(existing_study_ids))) {
+    next_study_id <- 1
+  } else {
+    next_study_id <- max(existing_study_ids, na.rm = TRUE) + 1
+  }
+  
   # Add columns to make a new studies matrix
   new_studies <- cbind(
     ready_agents,
-    study_id = sim_env$next_study_id:(sim_env$next_study_id + n_studies - 1),
+    study_id = next_study_id:(next_study_id + n_studies - 1),
     effect_id = rep(NA, n_studies),
     study_type = rep(NA, n_studies),
     timestep_completed = rep(NA, n_studies),
@@ -37,8 +45,6 @@ run_studies <- function(sim_env) {
     truth_contribution = rep(NA, n_studies),
     publication_status = rep(NA, n_studies)
   )
-  # Update next_study_id tracker
-  sim_env$next_study_id <- sim_env$next_study_id + n_studies
 
   # Determine study types
   # Determine original or replication based on each agent's replication_probability
@@ -92,4 +98,22 @@ run_studies <- function(sim_env) {
   # Determine number of timesteps the study will take (and record the timestep when it will be done in paper and agent)
   # Use sample size and true effect size to determine observed effect size and p-value (use one-tailed tests...)
   # Calculate novelty contribution and truth contribution and update effects matrix
+  
+  # Fill in new studies into studies matrix
+  # Find next available index in studies matrix (first row with NA study_id)
+  existing_study_ids <- sim_env$studies[, "study_id"]
+  if (all(is.na(existing_study_ids))) {
+    start_index <- 1
+  } else {
+    start_index <- which(is.na(existing_study_ids))[1]
+  }
+  end_index <- start_index + n_studies - 1
+  
+  # Fill in study columns (excluding agent-specific columns)
+  study_columns <- c("researcher_id", "study_id", "effect_id", "study_type", "timestep_completed",
+                     "sample_size", "estimated_mean", "estimated_se", "p_value",
+                     "novelty_contribution", "truth_contribution", "publication_status")
+  
+  sim_env$studies[start_index:end_index, study_columns] <- new_studies[, study_columns]
+  
 }

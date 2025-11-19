@@ -40,10 +40,7 @@ run_simulation <- function(params) {
     sim_env$n_timesteps_per_career_step
   )
 
-  # Initialize trackers
-  sim_env$next_study_id <- 1
-  sim_env$next_agent_id <- 1
-  sim_env$next_agent_index <- 1
+  # Initialize timestep tracker
   sim_env$timestep <- 0
 
   # Generate initial population of agents
