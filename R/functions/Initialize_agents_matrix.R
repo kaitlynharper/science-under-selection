@@ -5,7 +5,7 @@ initialize_agents_matrix <- function(
   n_timesteps,
   n_timesteps_per_career_step
 ) {
-  #Initialize matrix of agents
+  # Initialize matrix of agents
   # Calculate total number of agents (recording agents each career step)
   total_agents <- n_agents *
     (floor(n_timesteps / n_timesteps_per_career_step) + 1)
@@ -13,10 +13,10 @@ initialize_agents_matrix <- function(
   # Set column names
   colnames(agents) <- c(
     "researcher_id",
-    "timestep",
     "replication_probability",
     "target_power",
-    "career_status",
+    "timestep_active",
+    "timestep_inactive",
     "timestep_next_paper"
   )
   return(agents)
