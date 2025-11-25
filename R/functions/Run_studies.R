@@ -43,62 +43,27 @@ run_studies <- function(sim_env) {
     p_value = rep(NA, n_studies),
     novelty_contribution = rep(NA, n_studies),
     truth_contribution = rep(NA, n_studies),
-    publication_status = rep(NA, n_studies)
+    publication_status = rep(1, n_studies)
   )
-
-  # Determine study types
-  # Determine original or replication based on each agent's replication_probability
-  is_replication <- runif(n_studies) < new_studies[, "replication_probability"]
-  new_studies[, "study_type"] <- ifelse(is_replication, 1, 0)
-  # Identify available effect_IDs for original studies
-  available_original_effects <- sim_env$effects[
-    !sim_env$effects[, "effect_id"] %in%
-      sim_env$studies[
-        sim_env$studies[, "publication_status"] == 1,
-        "effect_id"
-      ],
-    "effect_id"
-  ]
-  # Identify available effect_IDs for replication studies (TODO order by number of replications, but can do more than one replication)
-  available_replication_effects <- unique(sim_env$studies[
-    sim_env$studies[, "publication_status"] == 1,
-    "effect_id"
-  ])
-
-  # allow multiple replications per paper but not within same timestep (and track how often agents don't get what they wanted)
-
-  # If there are enough available effect_IDs for replication, go ahead, otherwise reassign agents to original studies
-  if (sum(is_replication) > length(available_replication_effects)) {
-    # turn the excess replications with the lowest replication_probability into original studies
-    excess_replications <- sum(is_replication) -
-      length(available_replication_effects)
-    convert_indices <- which(is_replication)[order(new_studies[
-      is_replication,
-      "replication_probability"
-    ])[1:excess_replications]]
-    is_replication[convert_indices] <- FALSE #update logical indexing
-    new_studies[convert_indices, "study_type"] <- 0 #update study type
-  }
-
-  # Assign effect_IDs to agents for original studies from available effect_IDs (without replacement)
-  # Assign effect_IDs to agents for replication studies from available effect_IDs (without replacement)
-
-  # Run original studies
-
-  # Set reference effect size (first 20 studies(?) = medium cohens d, then mean of all published effect sizes)
-  # Determine sample size using target_power and all published effect sizes (what to do for first timestep studies? medium cohens d)
-  # Determine number of timesteps the study will take (and record the timestep when it will be done in paper and agent)
-  # Use sample size and true effect size to determine observed effect size and p-value
-  # Calculate novelty contribution and truth contribution and update effects matrix
-
-  # Run replication studies
-
-  # Set reference effect size (mean of original study for that effect_ID)
-  # Determine sample size using target_power and previously published effect sizes
-  # Determine number of timesteps the study will take (and record the timestep when it will be done in paper and agent)
-  # Use sample size and true effect size to determine observed effect size and p-value (use one-tailed tests...)
-  # Calculate novelty contribution and truth contribution and update effects matrix
   
+  # Store new_studies in environment for helper functions
+  sim_env$new_studies <- new_studies
+
+  # Determine study types and assign effects
+  assign_effects(sim_env)
+  
+  # Calculate reference effects and sample sizes
+  determine_sample_sizes(sim_env)
+  
+  # Calculate study durations (vectorized helper: intercept + base_rate * sample_size)
+  # Generate study results for each (helper: true_effect + sampling, calculate p-value with appropriate test)
+  # Calculate contributions (vectorized helpers: novelty & truth)
+  # Update effects matrix with new posterior beliefs
+  
+# For now, generate random effect sizes for each study
+# TODO: remove once we have actual effect sizes based on study type and sample size
+  sim_env$new_studies[, "estimated_mean"] <- rnorm(n_studies, mean = 0, sd = 1)
+
   # Fill in new studies into studies matrix
   # Find next available index in studies matrix (first row with NA study_id)
   existing_study_ids <- sim_env$studies[, "study_id"]
@@ -114,6 +79,6 @@ run_studies <- function(sim_env) {
                      "sample_size", "estimated_mean", "estimated_se", "p_value",
                      "novelty_contribution", "truth_contribution", "publication_status")
   
-  sim_env$studies[start_index:end_index, study_columns] <- new_studies[, study_columns]
+  sim_env$studies[start_index:end_index, study_columns] <- sim_env$new_studies[, study_columns]
   
 }
