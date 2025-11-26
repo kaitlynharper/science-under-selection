@@ -124,3 +124,23 @@ determine_sample_sizes <- function(sim_env) {
   )
   sim_env$new_studies[, "sample_size"] <- sample_sizes
 }
+
+#### determine_study_durations ####
+determine_study_durations <- function(sim_env) {
+  browser()
+  # calculate duration: intercept (originals only) + coefficient * sample_size
+  durations <- ceiling(
+    ifelse(sim_env$is_replication, 0, sim_env$duration_original_intercept) + 
+    sim_env$duration_per_observation * sim_env$new_studies[, "sample_size"]
+  )
+  
+  # calculate when studies will be complete
+  sim_env$new_studies[, "timestep_completed"] <- sim_env$timestep + durations
+  
+  # update agents matrix: when each researcher will be ready for next paper
+  agent_indices <- match(
+    sim_env$new_studies[, "researcher_id"], 
+    sim_env$agents[, "researcher_id"]
+  )
+  sim_env$agents[agent_indices, "timestep_next_paper"] <- sim_env$new_studies[, "timestep_completed"]
+}

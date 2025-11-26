@@ -28,7 +28,9 @@ params <- list(
   effect_size_variance = 0.1,
   uninformed_prior_mean = 0,
   uninformed_prior_variance = 1,
-  mean_studies_per_agent_per_timestep = 2 # TODO remove once real studies are implemented
+  mean_studies_per_agent_per_timestep = 2, # TODO remove once real studies are implemented
+  duration_per_observation = 0.1, # TODO calibration required
+  duration_original_intercept = 1 # TODO calibration required
 )
 
 # Run simulation and track memory and runtime

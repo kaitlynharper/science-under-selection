@@ -55,7 +55,9 @@ run_studies <- function(sim_env) {
   # Calculate reference effects and sample sizes
   determine_sample_sizes(sim_env)
   
-  # Calculate study durations (vectorized helper: intercept + base_rate * sample_size)
+  # Calculate study durations and update agent next paper times
+  determine_study_durations(sim_env)
+  
   # Generate study results for each (helper: true_effect + sampling, calculate p-value with appropriate test)
   # Calculate contributions (vectorized helpers: novelty & truth)
   # Update effects matrix with new posterior beliefs
