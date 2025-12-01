@@ -2,12 +2,17 @@
 # Helper functions for running studies
 ##########################################################################
 
-# Determine sample size: power.t.test
-# Determine number of timesteps: base rate for sample size + intercept for original study vs replication?
-# Generate observed effect size and p-value
-# Calculate novelty contribution and truth contribution
-# Publication bias?
-# Update effects matrix
+# Implemented:
+# assign_effects: assign effect_ids to studies based on type
+# determine_sample_sizes: calculate sample sizes using power.t.test
+# determine_study_durations: calculate study completion times
+# generate_study_results: simulate observed effect sizes and p-values
+
+# TODO:
+# calculate_novelty_contribution: novelty contribution for each study
+# calculate_truth_contribution: truth contribution for each study
+# apply_publication_bias: determine which studies get published
+# update_effects_beliefs: update effects matrix with new posterior beliefs
 
 #### assign_effects ####
 assign_effects <- function(sim_env) {
@@ -143,4 +148,70 @@ determine_study_durations <- function(sim_env) {
     sim_env$agents[, "researcher_id"]
   )
   sim_env$agents[agent_indices, "timestep_next_paper"] <- sim_env$new_studies[, "timestep_completed"]
+}
+
+#### generate_study_results ####
+generate_study_results <- function(sim_env) {
+  n_studies <- nrow(sim_env$new_studies)
+  
+  # get true effect sizes for each study's effect
+  effect_indices <- match(
+    sim_env$new_studies[, "effect_id"],
+    sim_env$effects[, "effect_id"]
+  )
+  true_effects <- sim_env$effects[effect_indices, "true_effect_size"]
+  
+  # get sample sizes
+  sample_sizes <- sim_env$new_studies[, "sample_size"]
+  
+  # simulate observed t-statistics using noncentral t-distribution
+  # (when ncp = 0, this is a central t-distribution)
+  ncp <- sqrt(sample_sizes / 2) * true_effects
+  df <- 2 * (sample_sizes - 1)
+  t_obs <- stats::rt(n = n_studies, df = df, ncp = ncp)
+  
+  # convert t-statistics to cohen's d
+  d_obs <- t_obs * sqrt(2 / sample_sizes)
+  
+  # calculate standard error of cohen's d using Hedges–Olkin SE(d) formula
+  # for equal groups where sample_sizes is n per group
+  # TODO more research on how this SE fits with our Bayesian approach
+  se_obs <- sqrt(2 / sample_sizes + d_obs^2 / (4 * sample_sizes))
+  
+  # calculate p-values
+  p_obs <- numeric(n_studies)
+  
+  # replications: one-sided test in direction of original study
+  if (sum(sim_env$is_replication) > 0) {
+    # filter to published original studies
+    pub_orig <- sim_env$studies[, "study_type"] == 0 & 
+                sim_env$studies[, "publication_status"] == 1 &
+                !is.na(sim_env$studies[, "estimated_mean"])
+    
+    # match replication effect_ids to published originals
+    rep_effect_ids <- sim_env$new_studies[sim_env$is_replication, "effect_id"]
+    orig_indices <- match(rep_effect_ids, sim_env$studies[pub_orig, "effect_id"])
+    
+    # extract direction from matched originals
+    orig_direction <- sim_env$studies[pub_orig, "estimated_mean"][orig_indices]
+    
+    # test in same direction as original
+    p_obs[sim_env$is_replication] <- ifelse(
+      orig_direction > 0,
+      stats::pt(t_obs[sim_env$is_replication], df[sim_env$is_replication], lower.tail = FALSE),
+      stats::pt(t_obs[sim_env$is_replication], df[sim_env$is_replication], lower.tail = TRUE)
+    )
+  }
+  
+  # originals: two-sided test
+  p_obs[!sim_env$is_replication] <- 2 * stats::pt(
+    abs(t_obs[!sim_env$is_replication]),
+    df[!sim_env$is_replication],
+    lower.tail = FALSE
+  )
+  
+  # store results
+  sim_env$new_studies[, "estimated_mean"] <- d_obs
+  sim_env$new_studies[, "estimated_se"] <- se_obs
+  sim_env$new_studies[, "p_value"] <- p_obs
 }

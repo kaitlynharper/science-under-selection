@@ -58,13 +58,12 @@ run_studies <- function(sim_env) {
   # Calculate study durations and update agent next paper times
   determine_study_durations(sim_env)
   
-  # Generate study results for each (helper: true_effect + sampling, calculate p-value with appropriate test)
-  # Calculate contributions (vectorized helpers: novelty & truth)
-  # Update effects matrix with new posterior beliefs
+  # Generate study results (observed effect sizes and p-values)
+  generate_study_results(sim_env)
   
-# For now, generate random effect sizes for each study
-# TODO: remove once we have actual effect sizes based on study type and sample size
-  sim_env$new_studies[, "estimated_mean"] <- rnorm(n_studies, mean = 0, sd = 1)
+  # TODO calculate contributions (vectorized helpers: novelty & truth)
+  # TODO apply publication bias
+  # TODO update effects matrix with new posterior beliefs
 
   # Fill in new studies into studies matrix
   # Find next available index in studies matrix (first row with NA study_id)
