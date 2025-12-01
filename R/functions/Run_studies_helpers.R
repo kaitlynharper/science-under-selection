@@ -83,7 +83,7 @@ determine_sample_sizes <- function(sim_env) {
   # calculate reference effects
   reference_effects <- numeric(n_studies)
   
-  # originals: burn-in or mean published
+  # originals: burn-in medium or mean published
   if (sim_env$timestep < sim_env$n_timesteps_per_career_step) {
     reference_effects[!sim_env$is_replication] <- 0.5
   } else {
@@ -95,19 +95,27 @@ determine_sample_sizes <- function(sim_env) {
     reference_effects[!sim_env$is_replication] <- mean(published_effects)
   }
   
-  # replications: original study mean
+  # replications: use original effect if significant, otherwise medium
   if (sum(sim_env$is_replication) > 0) {
-    # create lookup: effect_id -> estimated_mean (for published originals only)
-    published_original_rows <- sim_env$studies[, "study_type"] == 0 & 
-                              sim_env$studies[, "publication_status"] == 1 &
-                              !is.na(sim_env$studies[, "estimated_mean"])
+    # filter to published original studies
+    pub_orig <- sim_env$studies[, "study_type"] == 0 & 
+                sim_env$studies[, "publication_status"] == 1 &
+                !is.na(sim_env$studies[, "estimated_mean"])
     
-    original_means_by_effect <- sim_env$studies[published_original_rows, "estimated_mean"]
-    names(original_means_by_effect) <- sim_env$studies[published_original_rows, "effect_id"]
+    # match replication effect_ids to published originals
+    rep_effect_ids <- sim_env$new_studies[sim_env$is_replication, "effect_id"]
+    orig_indices <- match(rep_effect_ids, sim_env$studies[pub_orig, "effect_id"])
     
-    # look up means for each replication
-    replication_effect_ids <- sim_env$new_studies[sim_env$is_replication, "effect_id"]
-    reference_effects[sim_env$is_replication] <- original_means_by_effect[as.character(replication_effect_ids)]
+    # extract means and p-values for matched originals
+    orig_means <- sim_env$studies[pub_orig, "estimated_mean"][orig_indices]
+    orig_pvals <- sim_env$studies[pub_orig, "p_value"][orig_indices]
+    
+    # use original effect if p < 0.05, otherwise 0.5
+    reference_effects[sim_env$is_replication] <- ifelse(
+      orig_pvals < 0.05,
+      abs(orig_means),
+      0.5
+    )
   }
   
   # calculate sample sizes with appropriate test type
