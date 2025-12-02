@@ -1,18 +1,11 @@
 #### Function: initialize_studies_matrix ####
 
-initialize_studies_matrix <- function(
-  n_agents,
-  n_timesteps,
-  mean_studies_per_agent_per_timestep
-) {
+initialize_studies_matrix <- function(sim_env) {
   # Initialize matrix of studies
-  # Calculate total number of studies
-  total_studies <- n_agents *
-    n_timesteps *
-    (mean_studies_per_agent_per_timestep + 1)
-  studies <- matrix(0, nrow = total_studies, ncol = 12)
-  # Set column names
-  colnames(studies) <- c(
+  # TODO update this calculation once we have better calibration of study counts
+  total_studies <- sim_env$n_agents * sim_env$n_timesteps * 100
+  sim_env$studies <- matrix(NA, nrow = total_studies, ncol = 12)
+  colnames(sim_env$studies) <- c(
     "study_id",
     "researcher_id",
     "effect_id",
@@ -26,5 +19,4 @@ initialize_studies_matrix <- function(
     "truth_contribution",
     "publication_status"
   )
-  return(studies)
 }

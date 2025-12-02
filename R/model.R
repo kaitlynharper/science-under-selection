@@ -17,28 +17,13 @@ run_simulation <- function(params) {
   #### Initialize model ####
 
   # Initialize effects matrix
-  sim_env$effects <- initialize_effects_matrix(
-    sim_env$n_effects,
-    sim_env$base_null_probability,
-    sim_env$effect_size_mean,
-    sim_env$effect_size_variance,
-    sim_env$uninformed_prior_mean,
-    sim_env$uninformed_prior_variance
-  )
+  initialize_effects_matrix(sim_env)
 
   # Initialize empty studies matrix
-  sim_env$studies <- initialize_studies_matrix(
-    sim_env$n_agents,
-    sim_env$n_timesteps,
-    sim_env$mean_studies_per_agent_per_timestep
-  )
+  initialize_studies_matrix(sim_env)
 
   # Initialize empty agents matrix
-  sim_env$agents <- initialize_agents_matrix(
-    sim_env$n_agents,
-    sim_env$n_timesteps,
-    sim_env$n_timesteps_per_career_step
-  )
+  initialize_agents_matrix(sim_env)
 
   # Initialize timestep tracker
   sim_env$timestep <- 0
@@ -59,7 +44,7 @@ run_simulation <- function(params) {
     sim_env$timestep <- timestep
     
     # Run actual studies
-    output <- run_studies(sim_env)
+    run_studies(sim_env)
 
     # Career turnover phase
     if (sim_env$timestep %% sim_env$n_timesteps_per_career_step == 0) {
@@ -70,10 +55,6 @@ run_simulation <- function(params) {
     }
   }
 
-  # Return list of results (eventually will also output effects matrix)
-  return(list(
-    studies = sim_env$studies,
-    agents = sim_env$agents,
-    effects = sim_env$effects
-  ))
+  # Return the env
+  return(sim_env)
 }
