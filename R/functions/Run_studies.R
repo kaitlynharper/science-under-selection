@@ -2,15 +2,11 @@
 
 run_studies <- function(sim_env) {
   # Identify agents who are ready to start a new study and are active
-  browser() #debug point
-
-  # Filter for active agents who are ready to start a new paper
   ready_indices <- which(
     !is.na(sim_env$agents[, "researcher_id"]) &
       is.na(sim_env$agents[, "timestep_inactive"]) &
       sim_env$agents[, "timestep_next_paper"] == sim_env$timestep
   )
-
   ready_agents <- sim_env$agents[
     ready_indices,
     c("researcher_id", "replication_probability", "target_power"),
@@ -89,7 +85,7 @@ run_studies <- function(sim_env) {
   end_index <- start_index + n_studies - 1
   
   # Fill in study columns (excluding agent-specific columns)
-  study_columns <- c("researcher_id", "study_id", "effect_id", "study_type", "timestep_completed",
+  study_columns <- c("study_id", "researcher_id", "effect_id", "study_type", "timestep_completed",
                      "sample_size", "estimated_mean", "estimated_se", "p_value",
                      "novelty_contribution", "truth_contribution", "publication_status")
   

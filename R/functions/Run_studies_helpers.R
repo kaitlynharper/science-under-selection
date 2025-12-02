@@ -76,7 +76,6 @@ assign_effects <- function(sim_env) {
 
 #### determine_sample_sizes ####
 determine_sample_sizes <- function(sim_env) {
-  browser()
   n_studies <- nrow(sim_env$new_studies)
   
   # calculate reference effects

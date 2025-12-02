@@ -9,6 +9,7 @@ run_simulation <- function(params) {
   # Create simulation environment
   sim_env <- new.env()
   
+  # TODO consider keeping the params bundled for easy export
   # Store parameters in environment
   for (param_name in names(params)) {
     sim_env[[param_name]] <- params[[param_name]]
@@ -40,7 +41,9 @@ run_simulation <- function(params) {
 
   #### Timestep loop ####
   for (timestep in 0:sim_env$n_timesteps) {
+    
     # Update timestep tracker in the environment
+    # (R doesn't like to use an environment variable as a loop index variable)
     sim_env$timestep <- timestep
     
     # Run actual studies

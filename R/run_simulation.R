@@ -19,6 +19,17 @@ source(here("R", "model.R"))
 
 # Define simulation parameters
 params <- list(
+  n_agents = 100, # number of agents
+  n_timesteps = 500, # number of timesteps
+  n_timesteps_per_career_step = 5, # number of timesteps per career phase
+  n_effects = 10000, # number of effects
+  base_null_probability = 0.1, # base probability of a null effect
+  effect_size_mean = 0.3, # mean effect size
+  effect_size_variance = 0.1, # variance of effect sizes
+  uninformed_prior_mean = 0, # mean of uninformed prior
+  uninformed_prior_variance = 1, # variance of uninformed prior
+  duration_per_observation = 0.1, # TODO calibration required # timesteps per observations
+  duration_original_intercept = 1, # TODO calibration required # base timesteps for original studies
   # Publication bias parameters
   sig_y_intercept = 0.5, # minimum publication probability for p < .05 results
   sig_logistic_midpoint = 1, # novelty midpoint for significant results
@@ -32,20 +43,18 @@ params <- list(
 )
 
 # Run simulation and track memory and runtime
-#profvis_profile <- profvis({
-  results <- run_simulation(params)
-#})
+# profvis_profile <- profvis({
+results <- run_simulation(params)
+# })
 
 # Memory usage of results
 cat("=== MEMORY USAGE ===\n")
 cat("Studies matrix:", object_size(results$studies), "bytes\n")
 cat("Agents matrix:", object_size(results$agents), "bytes\n")
+cat("Effects matrix:", object_size(results$effects), "bytes\n")
 # Display model output
 View(results$agents)
 View(results$studies)
 View(results$effects)
 # Open profvis profile
-print(profvis_profile)
-
-# Positron debugging option
-# debugonce(run_simulation)
+# print(profvis_profile)
