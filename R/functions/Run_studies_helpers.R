@@ -7,8 +7,8 @@
 # determine_sample_sizes: calculate sample sizes using power.t.test
 # determine_study_durations: calculate study completion times
 # generate_study_results: simulate observed effect sizes and p-values
-
-# TODO:
+# kl_norm: KL divergence between two normal distributions
+# prepare_bayesian_data: extract current beliefs and calculate new posteriors
 # calculate_novelty_contribution: novelty contribution for each study
 # calculate_truth_contribution: truth contribution for each study
 # apply_publication_bias: determine which studies get published
@@ -223,3 +223,82 @@ generate_study_results <- function(sim_env) {
   sim_env$new_studies[, "estimated_se"] <- se_obs
   sim_env$new_studies[, "p_value"] <- p_obs
 }
+
+#### kl_norm ####
+kl_norm <- function(mu0, sd0, mu1, sd1) {
+  # KL divergence from N(mu0, sd0) to N(mu1, sd1)
+  log(sd1 / sd0) + (sd0^2 + (mu0 - mu1)^2) / (2 * sd1^2) - 0.5
+}
+
+#### prepare_bayesian_data ####
+prepare_bayesian_data <- function(sim_env) {
+  # grab most recent entry for each effect_id
+  # (effects matrix accumulates multiple rows per effect as beliefs update)
+  
+  # identify latest rows for each effect_id
+  is_latest <- !duplicated(sim_env$effects[, "effect_id"], fromLast = TRUE)
+  
+  # match studies to their latest effect rows
+  effect_match <- match(
+    sim_env$new_studies[, "effect_id"],
+    sim_env$effects[is_latest, "effect_id"]
+  )
+  effect_rows <- which(is_latest)[effect_match]
+  
+  # extract data needed for bayesian update and kl calculations
+  sim_env$prior_means <- sim_env$effects[effect_rows, "posterior_effect_size"]
+  sim_env$prior_vars <- sim_env$effects[effect_rows, "posterior_effect_variance"]
+  sim_env$true_means <- sim_env$effects[effect_rows, "true_effect_size"]
+  sim_env$true_vars <- sim_env$effects[effect_rows, "true_effect_variance"]
+  
+  # likelihood from study results
+  likelihood_means <- sim_env$new_studies[, "estimated_mean"]
+  likelihood_vars <- sim_env$new_studies[, "estimated_se"]^2
+  
+  # bayesian update (normal-normal conjugacy)
+  posterior_vars <- 1 / (1 / sim_env$prior_vars + 1 / likelihood_vars)
+  posterior_means <- (sim_env$prior_means / sim_env$prior_vars + 
+                      likelihood_means / likelihood_vars) * posterior_vars
+  
+  # save new posteriors in environment
+  sim_env$new_posterior_means <- posterior_means
+  sim_env$new_posterior_vars <- posterior_vars
+}
+
+#### calculate_novelty_contribution ####
+calculate_novelty_contribution <- function(sim_env) {
+  # information gain = KL(new posterior || old posterior)
+  novelty <- kl_norm(
+    sim_env$new_posterior_means,
+    sqrt(sim_env$new_posterior_vars),
+    sim_env$prior_means,
+    sqrt(sim_env$prior_vars)
+  )
+  
+  sim_env$new_studies[, "novelty_contribution"] <- novelty
+}
+
+#### calculate_truth_contribution ####
+calculate_truth_contribution <- function(sim_env) {
+  # verisimilitude change = KL(true || prior) - KL(true || posterior)
+  # positive when study moved beliefs closer to truth
+  
+  kl_prior_to_true <- kl_norm(
+    sim_env$true_means,
+    sqrt(sim_env$true_vars),
+    sim_env$prior_means,
+    sqrt(sim_env$prior_vars)
+  )
+  
+  kl_posterior_to_true <- kl_norm(
+    sim_env$true_means,
+    sqrt(sim_env$true_vars),
+    sim_env$new_posterior_means,
+    sqrt(sim_env$new_posterior_vars)
+  )
+  
+  truth <- kl_prior_to_true - kl_posterior_to_true
+  
+  sim_env$new_studies[, "truth_contribution"] <- truth
+}
+

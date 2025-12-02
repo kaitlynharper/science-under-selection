@@ -61,9 +61,10 @@ run_studies <- function(sim_env) {
   # Generate study results (observed effect sizes and p-values)
   generate_study_results(sim_env)
   
-  # TODO calculate contributions (vectorized helpers: novelty & truth)
-  # TODO apply publication bias
-  # TODO update effects matrix with new posterior beliefs
+  # Calculate Bayesian posteriors and contribution metrics
+  prepare_bayesian_data(sim_env)
+  calculate_novelty_contribution(sim_env)
+  calculate_truth_contribution(sim_env)
 
   # Fill in new studies into studies matrix
   # Find next available index in studies matrix (first row with NA study_id)
