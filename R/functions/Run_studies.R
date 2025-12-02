@@ -74,6 +74,9 @@ run_studies <- function(sim_env) {
     # Apply publication bias
     apply_publication_bias(sim_env)
   }
+  
+  # Update effects matrix with new posterior beliefs
+  update_effects_beliefs(sim_env)
 
   # Fill in new studies into studies matrix
   # Find next available index in studies matrix (first row with NA study_id)

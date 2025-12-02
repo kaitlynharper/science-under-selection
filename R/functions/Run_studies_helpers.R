@@ -301,3 +301,40 @@ calculate_truth_contribution <- function(sim_env) {
   sim_env$new_studies[, "truth_contribution"] <- truth
 }
 
+#### update_effects_beliefs ####
+update_effects_beliefs <- function(sim_env) {
+  # filter to only published studies
+  is_published <- sim_env$new_studies[, "publication_status"] == 1
+  n_published <- sum(is_published)
+  
+  if (n_published == 0) {
+    return() #finish if no published studies
+  }
+  
+  # find next available index in effects matrix
+  # (first row where effect_id is NA, indicating an unfilled row)
+  available_rows <- which(is.na(sim_env$effects[, "effect_id"]))
+  
+  if (length(available_rows) < n_published) {
+    stop("Insufficient rows in effects matrix at timestep ", sim_env$timestep)
+  }
+  
+  start_index <- available_rows[1]
+  end_index <- start_index + n_published - 1
+  
+  # create new rows for each published study
+  new_effect_rows <- cbind(
+    effect_id = sim_env$new_studies[is_published, "effect_id"],
+    timestep = rep(sim_env$timestep, n_published),
+    true_effect_size = sim_env$true_means[is_published],
+    true_effect_variance = sim_env$true_vars[is_published],
+    prior_effect_size = sim_env$prior_means[is_published],
+    prior_effect_variance = sim_env$prior_vars[is_published],
+    posterior_effect_size = sim_env$new_posterior_means[is_published],
+    posterior_effect_variance = sim_env$new_posterior_vars[is_published],
+    study_id = sim_env$new_studies[is_published, "study_id"]
+  )
+  
+  # fill in rows directly
+  sim_env$effects[start_index:end_index, ] <- new_effect_rows
+}
