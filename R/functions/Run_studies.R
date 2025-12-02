@@ -43,7 +43,7 @@ run_studies <- function(sim_env) {
     p_value = rep(NA, n_studies),
     novelty_contribution = rep(NA, n_studies),
     truth_contribution = rep(NA, n_studies),
-    publication_status = rep(1, n_studies)
+    publication_status = rep(NA, n_studies)
   )
   
   # Store new_studies in environment for helper functions
@@ -65,6 +65,15 @@ run_studies <- function(sim_env) {
   prepare_bayesian_data(sim_env)
   calculate_novelty_contribution(sim_env)
   calculate_truth_contribution(sim_env)
+  
+  # Apply publication bias (only in novelty selection condition)
+  if(sim_env$selection_condition == 0){
+    # All papers are published
+    sim_env$new_studies[, "publication_status"] <- rep(1, n_studies)
+  } else {
+    # Apply publication bias
+    apply_publication_bias(sim_env)
+  }
 
   # Fill in new studies into studies matrix
   # Find next available index in studies matrix (first row with NA study_id)

@@ -11,7 +11,6 @@
 # prepare_bayesian_data: extract current beliefs and calculate new posteriors
 # calculate_novelty_contribution: novelty contribution for each study
 # calculate_truth_contribution: truth contribution for each study
-# apply_publication_bias: determine which studies get published
 # update_effects_beliefs: update effects matrix with new posterior beliefs
 
 #### assign_effects ####

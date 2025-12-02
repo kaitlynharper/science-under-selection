@@ -19,18 +19,12 @@ source(here("R", "model.R"))
 
 # Define simulation parameters
 params <- list(
-  n_agents = 10,
-  n_timesteps = 10,
-  n_timesteps_per_career_step = 10,
-  n_effects = 50,
-  base_null_probability = 0.1,
-  effect_size_mean = 0.3,
-  effect_size_variance = 0.1,
-  uninformed_prior_mean = 0,
-  uninformed_prior_variance = 1,
-  mean_studies_per_agent_per_timestep = 2, # TODO remove once real studies are implemented
-  duration_per_observation = 0.1, # TODO calibration required
-  duration_original_intercept = 1 # TODO calibration required
+  # Publication bias parameters
+  sig_y_intercept = 0.5, # minimum publication probability for p < .05 results
+  sig_logistic_midpoint = 1, # novelty midpoint for significant results
+  sig_logistic_steepness = 5, # steepness of logistic curve for significant results
+  nonsig_logistic_midpoint = 1, # novelty midpoint for non-significant results
+  nonsig_logistic_steepness = 5, # steepness of logistic curve for non-significant results
 )
 
 # Run simulation and track memory and runtime
