@@ -46,12 +46,10 @@ run_simulation <- function(params) {
     # Run actual studies
     run_studies(sim_env)
 
-    # Career turnover phase
-    if (sim_env$timestep %% sim_env$n_timesteps_per_career_step == 0) {
-      # TODO Don't select on the first career phase studies, wait out the weird effects
-      # Retire set % of agents based on novelty or truth contributions
-      # Generate new agents to fill lowest level (sample existing trait values + noise)
-      # ^ Remember to update next_agent_id when doing this
+    # Career turnover phase (skip first career step)
+    if (sim_env$timestep %% sim_env$n_timesteps_per_career_step == 0 &&
+        sim_env$timestep > 0) {
+      career_turnover(sim_env)
     }
   }
 

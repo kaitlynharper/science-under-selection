@@ -25,6 +25,10 @@ params <- list(
   sig_logistic_steepness = 5, # steepness of logistic curve for significant results
   nonsig_logistic_midpoint = 1, # novelty midpoint for non-significant results
   nonsig_logistic_steepness = 5, # steepness of logistic curve for non-significant results
+  # Career turnover parameters
+  selection_condition = 0, # 0 = selection based on truth, 1 = selection based on novelty
+  career_turnover_selection_rate = 0.1, # proportion of agents to retire each career step
+  innovation_sd = 0.05 # standard deviation of innovation noise added to new agents
 )
 
 # Run simulation and track memory and runtime
