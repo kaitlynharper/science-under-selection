@@ -20,11 +20,11 @@ source(here("R", "model.R"))
 # Define simulation parameters
 params <- list(
   n_agents = 1000, # number of agents
-  n_timesteps = 500, # number of timesteps
+  n_timesteps = 100, # number of timesteps
   n_timesteps_per_career_step = 10, # number of timesteps per career phase
   n_effects = 20000, # number of effects
-  base_null_probability = 0.9, # base probability of a null effect
-  effect_size_mean = 0.3, # mean effect size
+  base_null_probability = .9, # base probability of a null effect
+  effect_size_mean = .3, # mean effect size
   effect_size_variance = 0.1, # variance of effect sizes
   uninformed_prior_mean = 0, # mean of uninformed prior
   uninformed_prior_variance = 1, # variance of uninformed prior
@@ -41,7 +41,7 @@ params <- list(
   career_turnover_selection_rate = 0.5, # proportion of agents to retire each career step
   innovation_sd = 0.05, # standard deviation of innovation noise added to new agents
   hold_samples_constant_at = 30, # if NA, sample sizes are calculated; if a value, all studies use that sample size
-  publication_bias = 0 #0 = no publication bias, 1 = publication bias
+  publication_bias = 1 #0 = no publication bias, 1 = publication bias
 )
 
 # Run simulation and track memory and runtime
