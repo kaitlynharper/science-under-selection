@@ -47,6 +47,8 @@ run_simulation <- function(params) {
     # (R doesn't like to use an environment variable as a loop index variable)
     sim_env$timestep <- timestep
     
+    print(paste0("Timestep ", timestep))
+    
     # Run actual studies
     run_studies(sim_env)
 
