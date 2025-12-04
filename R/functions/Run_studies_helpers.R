@@ -80,6 +80,12 @@ assign_effects <- function(sim_env) {
 determine_sample_sizes <- function(sim_env) {
   n_studies <- nrow(sim_env$new_studies)
   
+  # if hold_samples_constant_at is set, use that value for all studies
+  if (!is.na(sim_env$hold_samples_constant_at)) {
+    sim_env$new_studies[, "sample_size"] <- rep(sim_env$hold_samples_constant_at, n_studies)
+    return()
+  }
+  
   # calculate reference effects
   reference_effects <- numeric(n_studies)
   

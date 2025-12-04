@@ -38,6 +38,7 @@ params <- list(
   nonsig_logistic_steepness = 5, # steepness of logistic curve for non-significant results
   # Career turnover parameters
   selection_condition = 0, # 0 = selection based on truth, 1 = selection based on novelty
+  hold_samples_constant_at = 30, # if NA, sample sizes are calculated; if a value, all studies use that sample size
   publication_bias = 0 #0 = no publication bias, 1 = publication bias
 )
 
