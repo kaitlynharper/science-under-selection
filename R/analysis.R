@@ -7,140 +7,183 @@ library(here)
 library(rlang)
 
 #### KL divergence between two normals (vectorized) ####
-kl_divergence_normal <- function(true_mean, true_sd, belief_mean, belief_sd) {
-  log(belief_sd / true_sd) + (true_sd^2 + (true_mean - belief_mean)^2) / (2 * belief_sd^2) - 0.5
+kl_norm <- function(mu0, sd0, mu1, sd1) {
+  log(sd1 / sd0) + (sd0^2 + (mu0 - mu1)^2) / (2 * sd1^2) - 0.5
 }
 
 #### Extract agent traits over time ####
-# agent_type: "active" = currently active agents, "new" = agents that joined this timestep
 extract_agent_traits <- function(sim_env) {
-  all_agents <- sim_env$agents[!is.na(sim_env$agents[, "researcher_id"]), , drop = FALSE]
+  agents <- sim_env$agents[
+    !is.na(sim_env$agents[, "researcher_id"]),
+    ,
+    drop = FALSE
+  ]
   timesteps <- 0:sim_env$n_timesteps
-  n_timesteps <- length(timesteps)
-  
-  # Pre-allocate output
-  agent_traits <- data.frame(
-    timestep = timesteps,
-    replication_probability_mean = numeric(n_timesteps),
-    replication_probability_sd = numeric(n_timesteps),
-    target_power_mean = numeric(n_timesteps),
-    target_power_sd = numeric(n_timesteps)
-  )
-  
-  for (i in seq_along(timesteps)) {
-    current_timestep <- timesteps[i]
+  n_t <- length(timesteps)
 
-      # Active agents: joined on or before current timestep AND (not yet inactive OR inactive after current)
-      has_joined <- !is.na(all_agents[, "timestep_active"]) & 
-                    all_agents[, "timestep_active"] <= current_timestep
-      still_active <- is.na(all_agents[, "timestep_inactive"]) | 
-                      all_agents[, "timestep_inactive"] > current_timestep
-      is_selected <- has_joined & still_active
-    
-    if (sum(is_selected) == 0) {
-      agent_traits$replication_probability_mean[i] <- NA
-      agent_traits$replication_probability_sd[i] <- NA
-      agent_traits$target_power_mean[i] <- NA
-      agent_traits$target_power_sd[i] <- NA
-    } else {
-      agent_traits$replication_probability_mean[i] <- mean(all_agents[is_selected, "replication_probability"])
-      agent_traits$replication_probability_sd[i] <- sd(all_agents[is_selected, "replication_probability"])
-      agent_traits$target_power_mean[i] <- mean(all_agents[is_selected, "target_power"])
-      agent_traits$target_power_sd[i] <- sd(all_agents[is_selected, "target_power"])
-    }
+  # Pre-allocate output
+  out <- data.frame(
+    timestep = timesteps,
+    replication_probability_mean = numeric(n_t),
+    replication_probability_sd = numeric(n_t),
+    target_power_mean = numeric(n_t),
+    target_power_sd = numeric(n_t)
+  )
+
+  for (i in seq_along(timesteps)) {
+    t <- timesteps[i]
+    active <- agents[, "timestep_active"] <= t #&
+    # (is.na(agents[, "timestep_inactive"]) | agents[, "timestep_inactive"] > t)
+    # comments mean I'm only showing new agents this timestep (not total)
+
+    out$replication_probability_mean[i] <- mean(agents[
+      active,
+      "replication_probability"
+    ])
+    out$replication_probability_sd[i] <- sd(agents[
+      active,
+      "replication_probability"
+    ])
+    out$target_power_mean[i] <- mean(agents[active, "target_power"])
+    out$target_power_sd[i] <- sd(agents[active, "target_power"])
   }
-  agent_traits
+  out
 }
 
 #### Extract belief accuracy over time ####
 extract_belief_accuracy <- function(sim_env) {
-  all_effects <- sim_env$effects[!is.na(sim_env$effects[, "effect_id"]), , drop = FALSE]
+  effects <- sim_env$effects[
+    !is.na(sim_env$effects[, "effect_id"]),
+    ,
+    drop = FALSE
+  ]
   timesteps <- 0:sim_env$n_timesteps
-  n_timesteps <- length(timesteps)
-  
+  n_t <- length(timesteps)
+
   # Pre-allocate output
-  belief_accuracy <- data.frame(
+  out <- data.frame(
     timestep = timesteps,
-    total_kl = numeric(n_timesteps),
-    mean_kl = numeric(n_timesteps)
+    total_kl = numeric(n_t),
+    mean_kl = numeric(n_t)
   )
-  
+
   for (i in seq_along(timesteps)) {
-    current_timestep <- timesteps[i]
-    effects_so_far <- all_effects[all_effects[, "timestep"] <= current_timestep, , drop = FALSE]
-    
-    if (nrow(effects_so_far) == 0) {
-      belief_accuracy$total_kl[i] <- NA
-      belief_accuracy$mean_kl[i] <- NA
+    t <- timesteps[i]
+    relevant <- effects[effects[, "timestep"] <= t, , drop = FALSE]
+
+    if (nrow(relevant) == 0) {
+      out$total_kl[i] <- NA
+      out$mean_kl[i] <- NA
       next
     }
-    
+
     # Get latest row per effect using base R
-    is_latest_effect <- !duplicated(effects_so_far[, "effect_id"], fromLast = TRUE)
-    latest_effects <- effects_so_far[is_latest_effect, , drop = FALSE]
-    
-    kl_values <- kl_divergence_normal(
-      true_mean = latest_effects[, "true_effect_size"],
-      true_sd = sqrt(latest_effects[, "true_effect_variance"]),
-      belief_mean = latest_effects[, "posterior_effect_size"],
-      belief_sd = sqrt(latest_effects[, "posterior_effect_variance"])
+    latest_idx <- !duplicated(relevant[, "effect_id"], fromLast = TRUE)
+    latest <- relevant[latest_idx, , drop = FALSE]
+
+    kl <- kl_norm(
+      latest[, "true_effect_size"],
+      sqrt(latest[, "true_effect_variance"]),
+      latest[, "posterior_effect_size"],
+      sqrt(latest[, "posterior_effect_variance"])
     )
-    
-    belief_accuracy$total_kl[i] <- sum(kl_values)
-    belief_accuracy$mean_kl[i] <- mean(kl_values)
+
+    out$total_kl[i] <- sum(kl)
+    out$mean_kl[i] <- mean(kl)
   }
-  belief_accuracy
+  out
 }
 
 #### Plot agent traits ####
-plot_agent_traits <- function(agent_traits, output_dir = NULL) {
-  plot <- ggplot(agent_traits, aes(x = .data$timestep)) +
-    geom_line(aes(y = .data$replication_probability_mean, color = "Replication Probability"), 
-              linewidth = 1) +
-    geom_line(aes(y = .data$target_power_mean, color = "Target Power"), 
-              linewidth = 1) +
-    scale_color_manual(values = c("Replication Probability" = "#2c5f6e", 
-                                   "Target Power" = "#6e4a2c")) +
-    labs(x = "Timestep", y = "Mean Trait Value", 
-         title = "Agent Traits Over Time",
-         color = NULL) +
+plot_agent_traits <- function(trait_data, output_dir = NULL) {
+  p <- ggplot(trait_data) +
+    geom_ribbon(
+      aes(
+        x = .data$timestep,
+        ymin = .data$replication_probability_mean -
+          .data$replication_probability_sd,
+        ymax = .data$replication_probability_mean +
+          .data$replication_probability_sd
+      ),
+      alpha = 0.3,
+      fill = "#4a90a4"
+    ) +
+    geom_line(
+      aes(x = .data$timestep, y = .data$replication_probability_mean),
+      color = "#2c5f6e",
+      linewidth = 1
+    ) +
+    geom_ribbon(
+      aes(
+        x = .data$timestep,
+        ymin = .data$target_power_mean - .data$target_power_sd,
+        ymax = .data$target_power_mean + .data$target_power_sd
+      ),
+      alpha = 0.3,
+      fill = "#a4784a"
+    ) +
+    geom_line(
+      aes(x = .data$timestep, y = .data$target_power_mean),
+      color = "#6e4a2c",
+      linewidth = 1,
+      linetype = "dashed"
+    ) +
+    labs(
+      x = "Timestep",
+      y = "Trait Value",
+      title = "Agent Traits Over Time (mean ± SD)"
+    ) +
     theme_minimal() +
-    coord_cartesian(ylim = c(0, 1)) +
-    theme(legend.position = "bottom")
-  
+    coord_cartesian(ylim = c(0, 1))
+
   if (!is.null(output_dir)) {
-    ggsave(file.path(output_dir, "agent_traits.png"), plot, width = 8, height = 5, dpi = 300)
+    ggsave(
+      file.path(output_dir, "agent_traits.png"),
+      p,
+      width = 8,
+      height = 5,
+      dpi = 300
+    )
   }
-  plot
+  p
 }
 
 #### Plot belief accuracy ####
-plot_belief_accuracy <- function(belief_accuracy, output_dir = NULL) {
-  plot <- ggplot(belief_accuracy, aes(x = .data$timestep, y = .data$total_kl)) +
+plot_belief_accuracy <- function(belief_data, output_dir = NULL) {
+  p <- ggplot(belief_data, aes(x = .data$timestep, y = .data$total_kl)) +
     geom_line(color = "#8b4a62", linewidth = 1) +
-    labs(x = "Timestep", y = "Total KL Divergence",
-         title = "Community Belief Accuracy (lower = more accurate)") +
+    labs(
+      x = "Timestep",
+      y = "Total KL Divergence",
+      title = "Community Belief Accuracy (lower = more accurate)"
+    ) +
     theme_minimal()
-  
+
   if (!is.null(output_dir)) {
-    ggsave(file.path(output_dir, "belief_accuracy.png"), plot, width = 8, height = 5, dpi = 300)
+    ggsave(
+      file.path(output_dir, "belief_accuracy.png"),
+      p,
+      width = 8,
+      height = 5,
+      dpi = 300
+    )
   }
-  plot
+  p
 }
 
 #### Run analysis ####
 analyze_simulation <- function(sim_env, output_dir = NULL) {
-  agent_traits <- extract_agent_traits(sim_env)
-  belief_accuracy <- extract_belief_accuracy(sim_env)
-  
-  agent_traits_plot <- plot_agent_traits(agent_traits, output_dir)
-  belief_accuracy_plot <- plot_belief_accuracy(belief_accuracy, output_dir)
-  
+  trait_data <- extract_agent_traits(sim_env)
+  belief_data <- extract_belief_accuracy(sim_env)
+
+  trait_plot <- plot_agent_traits(trait_data, output_dir)
+  belief_plot <- plot_belief_accuracy(belief_data, output_dir)
+
   list(
-    agent_traits = agent_traits,
-    belief_accuracy = belief_accuracy,
-    agent_traits_plot = agent_traits_plot,
-    belief_accuracy_plot = belief_accuracy_plot
+    trait_data = trait_data,
+    belief_data = belief_data,
+    trait_plot = trait_plot,
+    belief_plot = belief_plot
   )
 }
 
