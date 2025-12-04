@@ -34,7 +34,8 @@ run_simulation <- function(params) {
     sim_env = sim_env,
     n_agents = sim_env$n_agents,
     timestep_active = 0,
-    replication_probabilities = runif(sim_env$n_agents, 0, 1),
+    #replication_probabilities = runif(sim_env$n_agents, 0, 1),
+    replication_probabilities = sample(c(0,1), sim_env$n_agents, replace = T),
     target_powers = runif(sim_env$n_agents, 0, 1),
     timestep_next_papers = rep(0, sim_env$n_agents)
   )
