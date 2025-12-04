@@ -38,8 +38,7 @@ params <- list(
   nonsig_logistic_steepness = 5, # steepness of logistic curve for non-significant results
   # Career turnover parameters
   selection_condition = 0, # 0 = selection based on truth, 1 = selection based on novelty
-  career_turnover_selection_rate = 0.1, # proportion of agents to retire each career step
-  innovation_sd = 0.05 # standard deviation of innovation noise added to new agents
+  publication_bias = 0 #0 = no publication bias, 1 = publication bias
 )
 
 # Run simulation and track memory and runtime
