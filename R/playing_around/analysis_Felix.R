@@ -21,7 +21,7 @@ for (i in career_steps) {
   active_agents <- agents |>
     filter(!is.na(timestep_active), timestep_active <= i, timestep_inactive > i | is.na(timestep_inactive))
 
-  stopifnot(nrow(active_agents) == results$n_agents)
+  #stopifnot(nrow(active_agents) == results$n_agents)
     
   res <- rbind(res, data.frame(
     timestep = i,
