@@ -41,30 +41,24 @@ career_turnover <- function(sim_env) {
   ]
   career_contribution[is.na(career_contribution)] <- 0
 
-  #### Identify agents with lowest percentile of career_contribution ####
-  threshold <- quantile(
-    career_contribution,
-    probs = sim_env$career_turnover_selection_rate,
-    na.rm = TRUE
-  )
-  which_to_retire <- which(career_contribution < threshold)
+  #### Identify bottom % of agents based on career_contribution ####
+  # Rank agents by career_contribution (with random ties)
+  ranks <- rank(career_contribution, ties.method = "random")
+  # Identify the cutoff rank according to career_turnover_selection_rate
+  n_retire <- floor(n_active * sim_env$career_turnover_selection_rate)
+  cutoff_rank <- n_retire
+  # Grab the indices of those agents
+  which_to_retire <- which(ranks <= cutoff_rank)
   retire_indices <- active_indices[which_to_retire]
-  n_retire <- length(retire_indices)
-
-  print(paste0(
-    "Retiring ",
-    n_retire,
-    " agents out of ",
-    n_active,
-    " active agents."
-  ))
-  # Mark low-performing agents as inactive
+  # Mark the low-performing agents as inactive
   sim_env$agents[retire_indices, "timestep_inactive"] <- sim_env$timestep
 
   #### Replace retired agents with new agents ####
   surviving_indices <- active_indices[-which_to_retire]
 
+  print(paste0("How many agents retiring: ", length(which_to_retire)))
   if (length(which_to_retire > 0)) {
+    #only add agents if needed
     # sample from survivors and add innovation noise
     new_rep_probs <- sample(
       sim_env$agents[surviving_indices, "replication_probability"],
