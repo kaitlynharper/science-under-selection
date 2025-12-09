@@ -15,6 +15,10 @@
 
 #### assign_effects ####
 assign_effects <- function(sim_env) {
+
+# create a local copy of the non-empty studies to speed up selection
+  studies <- sim_env$studies[!is.na(sim_env$studies[, "study_id"]), ]
+
   n_studies <- nrow(sim_env$new_studies)
   
   # determine study types based on each agent's replication_probability
@@ -23,19 +27,19 @@ assign_effects <- function(sim_env) {
   
   # identify available effect_ids for original studies
   # (effects not yet published, or published but not yet completed)
-  published_completed <- sim_env$studies[, "publication_status"] == 1 &
-    !is.na(sim_env$studies[, "timestep_completed"]) &
-    sim_env$studies[, "timestep_completed"] <= sim_env$timestep
+  published_completed <- studies[, "publication_status"] == 1 &
+    !is.na(studies[, "timestep_completed"]) &
+    studies[, "timestep_completed"] <= sim_env$timestep
   available_original_effects <- sim_env$effects[
     !sim_env$effects[, "effect_id"] %in%
-      sim_env$studies[published_completed, "effect_id"] &
+      studies[published_completed, "effect_id"] &
     !is.na(sim_env$effects[, "effect_id"]),
     "effect_id"
   ]
   
   # identify available effect_ids for replication studies
-  available_replication_effects <- unique(sim_env$studies[
-    published_completed & !is.na(sim_env$studies[, "effect_id"]),  
+  available_replication_effects <- unique(studies[
+    published_completed & !is.na(studies[, "effect_id"]),  
     "effect_id"
   ])
   
@@ -64,8 +68,8 @@ assign_effects <- function(sim_env) {
   
   # assign effect_ids to replication studies
   # count total publications per effect (only completed studies)
-  publication_counts <- table(sim_env$studies[
-    published_completed & !is.na(sim_env$studies[, "effect_id"]),
+  publication_counts <- table(studies[
+    published_completed & !is.na(studies[, "effect_id"]),
     "effect_id"
   ])
   # add small random jitter to order effects randomly within each count level

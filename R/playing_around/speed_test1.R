@@ -1,9 +1,3 @@
-##############################################################################
-# Run simulation
-#
-# Description: This file sources the necessary files and provides code to run
-# academiABM2 simulations
-##############################################################################
 
 # Load required packages
 library(here) # relative paths
@@ -20,7 +14,7 @@ source(here("R", "model.R"))
 # Define simulation parameters
 params <- list(
   n_agents = 1000, # number of agents
-  n_timesteps = 300, # number of timesteps
+  n_timesteps = 200, # number of timesteps
   n_timesteps_per_career_step = 5, # number of timesteps per career phase
   n_effects = 20000, # number of effects
   base_null_probability = .5, # base probability of a null effect
@@ -44,23 +38,59 @@ params <- list(
   publication_bias = 0 #0 = no publication bias, 1 = publication bias
 )
 
-# Run simulation and track memory and runtime
-# profvis_profile <- profvis({
-# results <- run_simulation(params)
-# })
 
-system.time({
-  results <- run_simulation(params)}
-)
+# Create simulation environment
+  sim_env <- new.env()
+  
+  # TODO consider keeping the params bundled for easy export
+  # Store parameters in environment
+  for (param_name in names(params)) {
+    sim_env[[param_name]] <- params[[param_name]]
+  }
+  
+  #### Initialize model ####
 
-# Memory usage of results
-# cat("=== MEMORY USAGE ===\n")
-# cat("Studies matrix:", object_size(results$studies), "bytes\n")
-# cat("Agents matrix:", object_size(results$agents), "bytes\n")
-# cat("Effects matrix:", object_size(results$effects), "bytes\n")
-# Display model output
-# View(results$agents)
-# View(results$studies)
-# View(results$effects)
-# Open profvis profile
-# print(profvis_profile)
+  # Initialize effects matrix
+  initialize_effects_matrix(sim_env)
+
+  # Initialize empty studies matrix
+  initialize_studies_matrix(sim_env)
+
+  # Initialize empty agents matrix
+  initialize_agents_matrix(sim_env)
+
+  # Initialize timestep tracker
+  sim_env$timestep <- 0
+
+  # Generate initial population of agents
+  add_agents(
+    sim_env = sim_env,
+    n_agents = sim_env$n_agents,
+    timestep_active = 0,
+    #replication_probabilities = runif(sim_env$n_agents, 0, 1),
+    replication_probabilities = sample(c(0,1), sim_env$n_agents, replace = T),
+    target_powers = runif(sim_env$n_agents, 0, 1),
+    timestep_next_papers = rep(0, sim_env$n_agents)
+  )
+
+  # #### Timestep loop ####
+  # for (timestep in 0:sim_env$n_timesteps) {
+    
+    # Update timestep tracker in the environment
+    # (R doesn't like to use an environment variable as a loop index variable)
+    sim_env$timestep <- timestep
+    
+    print(paste0("Timestep ", timestep))
+    
+    # Run actual studies
+    run_studies(sim_env)
+
+    system.time(
+      for (i in 1:10) career_turnover(sim_env)
+    )
+    
+    system.time(
+      for (i in 1:10) career_turnover2(sim_env)
+    )
+
+  # }

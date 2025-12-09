@@ -3,6 +3,10 @@
 ##########################################################################
 
 career_turnover <- function(sim_env) {
+
+  # create a local copy of the non-empty studies to speed up selection
+  studies <- sim_env$studies[!is.na(sim_env$studies[, "study_id"]), ]
+
   #### Find active agents ####
   active_indices <- which(
     !is.na(sim_env$agents[, "researcher_id"]) &
@@ -21,16 +25,16 @@ career_turnover <- function(sim_env) {
   # Filter studies to current career phase and published
   phase_start <- sim_env$timestep - sim_env$n_timesteps_per_career_step + 1
   in_phase <- which(
-    sim_env$studies[, "publication_status"] == 1 &
-      !is.na(sim_env$studies[, "timestep_completed"]) &
-      sim_env$studies[, "timestep_completed"] >= phase_start &
-      sim_env$studies[, "timestep_completed"] <= sim_env$timestep
+    studies[, "publication_status"] == 1 &
+      !is.na(studies[, "timestep_completed"]) &
+      studies[, "timestep_completed"] >= phase_start &
+      studies[, "timestep_completed"] <= sim_env$timestep
   )
 
   # Sum contributions by researcher_id using rowsum
   contribution_sums <- rowsum(
-    sim_env$studies[in_phase, contribution_column, drop = FALSE],
-    sim_env$studies[in_phase, "researcher_id"]
+    studies[in_phase, contribution_column, drop = FALSE],
+    studies[in_phase, "researcher_id"]
   )
 
   # Match contributions to active agents (agents with no studies get 0)
