@@ -90,7 +90,7 @@ career_turnover <- function(sim_env, verbose=FALSE) {
       timestep_active = sim_env$timestep,
       replication_probabilities = new_rep_probs,
       target_powers = new_powers,
-      timestep_next_papers = rep(sim_env$timestep, n_retire)
+      timestep_next_papers = rep(sim_env$timestep + 1, n_retire) # new agents are ready to do studies next timestep
     )
   }
 }
