@@ -57,7 +57,12 @@ run_simulation <- function(params, verbose=1) {
       sim_env$timestep %% sim_env$n_timesteps_per_career_step == 0 &&
         sim_env$timestep > 0
     ) {
-      career_turnover(sim_env, verbose=verbose > 1)
+      if (!is.na(sim_env$switch_conditions_at)) {
+        if (sim_env$switch_conditions_at == sim_env$timestep) {
+          sim_env$selection_condition <- 1 - sim_env$selection_condition
+        }
+      }
+      career_turnover(sim_env, verbose = verbose > 1)
     }
   }
 
