@@ -17,6 +17,9 @@ function_files <- list.files(here("R", "functions"), full.names = TRUE)
 sapply(function_files, source, .GlobalEnv)
 source(here("R", "model.R"))
 
+# Set seed for reproducibility
+set.seed(123)
+
 # Define simulation parameters
 params <- list(
   n_agents = 1000, # number of agents
@@ -31,13 +34,13 @@ params <- list(
   duration_per_observation = 0.1, # TODO calibration required # timesteps per observations
   duration_original_intercept = 1, # TODO calibration required # base timesteps for original studies
   # Publication bias parameters # TODO calibration required
-  sig_y_intercept = 0.2, # minimum publication probability for p < .05 results
+  sig_y_intercept = 0.5, # minimum publication probability for p < .05 results
   sig_logistic_midpoint = .5, # novelty midpoint for significant results
   sig_logistic_steepness = 3, # steepness of logistic curve for significant results
-  nonsig_logistic_midpoint = .5, # novelty midpoint for non-significant results
+  nonsig_logistic_midpoint = 1.5, # novelty midpoint for non-significant results
   nonsig_logistic_steepness = 3, # steepness of logistic curve for non-significant results
   # Career turnover parameters
-  selection_condition = 0, # 0 = selection based on truth, 1 = selection based on novelty
+  selection_condition = 1, # 0 = selection based on truth, 1 = selection based on novelty
   career_turnover_selection_rate = 0.5, # proportion of agents to retire each career step
   innovation_sd = 0.05, # standard deviation of innovation noise added to new agents
   hold_samples_constant_at = 10, # if NA, sample sizes are calculated; if a value, all studies use that sample size
