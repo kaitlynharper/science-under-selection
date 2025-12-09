@@ -9,6 +9,11 @@ add_agents <- function(
   timestep_next_papers
 ) {
   
+  if (n_agents == 0) {
+    warning("n_agents = 0; no agents to add. Skipping add_agents().")
+    return()
+  }
+
   # Generate new researcher IDs (max + 1)
   existing_ids <- sim_env$agents[, "researcher_id"]
   if (all(is.na(existing_ids))) {
