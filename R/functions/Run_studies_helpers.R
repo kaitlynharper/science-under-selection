@@ -339,7 +339,7 @@ update_effects_beliefs <- function(sim_env) {
   # create new rows for each published study
   new_effect_rows <- cbind(
     effect_id = sim_env$new_studies[is_published, "effect_id"],
-    timestep = rep(sim_env$timestep, n_published),
+    timestep = sim_env$new_studies[is_published, "timestep_completed"],
     true_effect_size = sim_env$true_means[is_published],
     true_effect_variance = sim_env$true_vars[is_published],
     prior_effect_size = sim_env$prior_means[is_published],
