@@ -18,7 +18,7 @@ sapply(function_files, source, .GlobalEnv)
 source(here("R", "model.R"))
 
 # Set seed for reproducibility
-set.seed(123)
+# set.seed(123)
 
 # Define simulation parameters
 params <- list(
