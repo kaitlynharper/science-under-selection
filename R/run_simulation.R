@@ -55,6 +55,12 @@ params <- list(
   publication_bias = 1 #0 = no publication bias, 1 = publication bias
 )
 
+# Uncomment code below to allow run_conditions.R script to overwrite parameter values
+#params$n_timesteps <- n_timesteps
+#params$selection_condition <- selection_condition
+#params$switch_conditions_at <- switch_conditions_at
+#params$publication_bias <- publication_bias
+
 # Run simulation and track memory and runtime
 # profvis_profile <- profvis({
 results <- run_simulation(params)
