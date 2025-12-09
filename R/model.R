@@ -5,7 +5,7 @@
 ##############################################################################
 
 # Simulation function
-run_simulation <- function(params) {
+run_simulation <- function(params, verbose=TRUE) {
   # Create simulation environment
   sim_env <- new.env()
 
@@ -49,7 +49,7 @@ run_simulation <- function(params) {
     print(paste0("Timestep ", timestep))
 
     # Run actual studies
-    run_studies(sim_env)
+    run_studies(sim_env, verbose=verbose)
 
     # Career turnover phase (skip first career step)
     if (

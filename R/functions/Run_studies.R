@@ -1,12 +1,16 @@
 #### Function: run_studies ####
 
-run_studies <- function(sim_env) {
+run_studies <- function(sim_env, verbose=FALSE) {
+
   # Identify agents who are ready to start a new study and are active
   ready_indices <- which(
     !is.na(sim_env$agents[, "researcher_id"]) &
       is.na(sim_env$agents[, "timestep_inactive"]) &
       sim_env$agents[, "timestep_next_paper"] == sim_env$timestep
   )
+
+  if (verbose) print(paste0(ready_indices |> length(), " agents are ready to run studies."))
+
   ready_agents <- sim_env$agents[
     ready_indices,
     c("researcher_id", "replication_probability", "target_power"),
