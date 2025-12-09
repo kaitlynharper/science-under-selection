@@ -5,7 +5,8 @@
 ##############################################################################
 
 # Simulation function
-run_simulation <- function(params, verbose=TRUE) {
+#' @param verbose Integer controlling verbosity level (0 = silent, 1 = only timestep, 2 = all intermediate functions).
+run_simulation <- function(params, verbose=1) {
   # Create simulation environment
   sim_env <- new.env()
 
@@ -46,17 +47,17 @@ run_simulation <- function(params, verbose=TRUE) {
     # (R doesn't like to use an environment variable as a loop index variable)
     sim_env$timestep <- timestep
 
-    print(paste0("Timestep ", timestep))
+    if (verbose > 0) print(paste0("Timestep ", timestep))
 
     # Run actual studies
-    run_studies(sim_env, verbose=verbose)
+    run_studies(sim_env, verbose=verbose > 1)
 
     # Career turnover phase (skip first career step)
     if (
       sim_env$timestep %% sim_env$n_timesteps_per_career_step == 0 &&
         sim_env$timestep > 0
     ) {
-      career_turnover(sim_env)
+      career_turnover(sim_env, verbose=verbose > 1)
     }
   }
 
