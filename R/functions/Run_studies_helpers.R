@@ -31,11 +31,16 @@ assign_effects <- function(sim_env, verbose=FALSE) {
     studies[, "timestep_completed"] <= sim_env$timestep
 
   # A vector flagging studies that are "in progress"
-  in_progress <- !is.na(studies[, "timestep_completed"]) &
-    studies[, "timestep_completed"] > sim_env$timestep
+  in_progress <- studies[, "timestep_completed"] > sim_env$timestep
 
-  # studies in the data frame are either "completed" or "in_progress"
-  stopifnot(all(published_completed == !in_progress))
+  # A vector flagging unpublished studies (i.e., the file drawer)
+  unpublished_completed <- studies[, "publication_status"] == 0 &
+      studies[, "timestep_completed"] <= sim_env$timestep
+
+  # studies in the data frame are either "completed" or "in_progress" or "unpublished"
+  test <- (cbind(published_completed, in_progress, unpublished_completed) |> rowSums())
+  stopifnot(all(test==1))
+
 
   published_completed_effect_ids <- unique(studies[
     published_completed & !is.na(studies[, "effect_id"]),  
@@ -55,13 +60,6 @@ assign_effects <- function(sim_env, verbose=FALSE) {
   # (as agents would need to know what effects all others are currently working on), but helps
   # avoiding conflicts where multiple original studies try to use the same effect_id.
 
-  # OLD version - remove
-  # available_original_effects <- sim_env$effects[
-  #   !sim_env$effects[, "effect_id"] %in% studies[published_completed, "effect_id"] &
-  #   !is.na(sim_env$effects[, "effect_id"]),
-  #   "effect_id"
-  # ]
-
   available_original_effects <- sim_env$effects[
     !sim_env$effects[, "effect_id"] %in% published_completed_effect_ids &
     !sim_env$effects[, "effect_id"] %in% in_progress_effect_ids &
@@ -71,7 +69,6 @@ assign_effects <- function(sim_env, verbose=FALSE) {
 
   if (verbose) print(paste0("Available original effects: ", length(available_original_effects)))
   
- 
   # if not enough available effects for replication, convert excess to originals
   if (sum(sim_env$is_replication) > length(published_completed_effect_ids)) {
     excess_replications <- sum(sim_env$is_replication) -

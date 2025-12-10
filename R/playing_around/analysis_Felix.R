@@ -108,3 +108,13 @@ ggplot(S2, aes(
   geom_point(alpha=0.3) +
   facet_wrap(is_null~study_type_label) +
   labs(title = TITLE, color="Study Type")
+
+print("% of replication studies with higher novelty score than the highest original study:")
+highest_original_novelty <- max(S2$novelty_contribution[S2$study_type == 0], na.rm=TRUE)
+S2 |>
+  filter(study_type == 1) |>
+  group_by(novelty_contribution > highest_original_novelty) |>
+  summarise(n = n())
+  
+  
+  sum(S2$study_type == 1 & S2$novelty_contribution > highest_original_novelty, na.rm=TRUE)
