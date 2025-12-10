@@ -24,32 +24,58 @@ assign_effects <- function(sim_env, verbose=FALSE) {
   # determine study types based on each agent's replication_probability
   sim_env$is_replication <- runif(n_studies) < sim_env$new_studies[, "replication_probability"]
   sim_env$new_studies[, "study_type"] <- ifelse(sim_env$is_replication, 1, 0)
-  
-  # identify available effect_ids for original studies
-  # (effects not yet published, or published but not yet completed)
+    
+  # A vector flagging studies that are completed and published
   published_completed <- studies[, "publication_status"] == 1 &
     !is.na(studies[, "timestep_completed"]) &
     studies[, "timestep_completed"] <= sim_env$timestep
 
+  # A vector flagging studies that are "in progress"
+  in_progress <- !is.na(studies[, "timestep_completed"]) &
+    studies[, "timestep_completed"] > sim_env$timestep
+
+  # studies in the data frame are either "completed" or "in_progress"
+  stopifnot(all(published_completed == !in_progress))
+
+  published_completed_effect_ids <- unique(studies[
+    published_completed & !is.na(studies[, "effect_id"]),  
+    "effect_id"
+  ])
+
+  in_progress_effect_ids <- unique(studies[
+    in_progress & !is.na(studies[, "effect_id"]),  
+    "effect_id"
+  ])
+
+  # identify available effect_ids for original studies
+
+  # TODO DOCUMENT: Eligible effects for original studies are those that
+  # have not yet been published in completed studies and are not currently being
+  # investigated in in-progress studies. The latter is a bit unrealistic 
+  # (as agents would need to know what effects all others are currently working on), but helps
+  # avoiding conflicts where multiple original studies try to use the same effect_id.
+
+  # OLD version - remove
+  # available_original_effects <- sim_env$effects[
+  #   !sim_env$effects[, "effect_id"] %in% studies[published_completed, "effect_id"] &
+  #   !is.na(sim_env$effects[, "effect_id"]),
+  #   "effect_id"
+  # ]
+
   available_original_effects <- sim_env$effects[
-    !sim_env$effects[, "effect_id"] %in%
-      studies[published_completed, "effect_id"] &
+    !sim_env$effects[, "effect_id"] %in% published_completed_effect_ids &
+    !sim_env$effects[, "effect_id"] %in% in_progress_effect_ids &
     !is.na(sim_env$effects[, "effect_id"]),
     "effect_id"
   ]
 
   if (verbose) print(paste0("Available original effects: ", length(available_original_effects)))
   
-  # identify available effect_ids for replication studies
-  available_replication_effects <- unique(studies[
-    published_completed & !is.na(studies[, "effect_id"]),  
-    "effect_id"
-  ])
-  
+ 
   # if not enough available effects for replication, convert excess to originals
-  if (sum(sim_env$is_replication) > length(available_replication_effects)) {
+  if (sum(sim_env$is_replication) > length(published_completed_effect_ids)) {
     excess_replications <- sum(sim_env$is_replication) -
-      sum(!is.na(available_replication_effects))
+      sum(!is.na(published_completed_effect_ids))
     convert_indices <- which(sim_env$is_replication)[order(sim_env$new_studies[
       sim_env$is_replication,
       "replication_probability"
@@ -66,7 +92,8 @@ assign_effects <- function(sim_env, verbose=FALSE) {
   # assign effect_ids to original studies (without replacement)
   sim_env$new_studies[!sim_env$is_replication, "effect_id"] <- sample(
     available_original_effects,
-    size = sum(!sim_env$is_replication)
+    size = sum(!sim_env$is_replication),
+    replace = FALSE
   )
   
   # assign effect_ids to replication studies

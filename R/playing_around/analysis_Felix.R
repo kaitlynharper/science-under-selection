@@ -5,7 +5,7 @@ library(patchwork)
 # make local copies of results components for faster access
 agents <- as.data.frame(results$agents) |> filter(!is.na(researcher_id))
 studies <- as.data.frame(results$studies) |> filter(!is.na(study_id))
-
+effects <- results$effects |> as.data.frame() |> filter(!is.na(effect_id))
 
 # At these time steps the career agent selection took place:
 career_steps <- seq(0, results$n_timesteps, by=results$n_timesteps_per_career_step)
@@ -22,6 +22,8 @@ for (i in career_steps) {
     filter(!is.na(timestep_active), timestep_active <= i, timestep_inactive > i | is.na(timestep_inactive))
 
   stopifnot(nrow(active_agents) == results$n_agents)
+
+  studies_in_last_period <- studies
     
   res <- rbind(res, data.frame(
     timestep = i,
@@ -78,3 +80,31 @@ TITLE <- paste0("n = ", results$hold_samples_constant_at, ", ",
 
 patchwork <- p1 + p2 + p3
 patchwork + plot_annotation(title = TITLE)
+
+
+
+# Analyze studies
+#-------------------------------------------------------
+
+study_type_count_per_effect <- studies |> group_by(effect_id) |> 
+  summarise(
+    n_original_studies = sum(study_type == 0),
+    n_replication_studies = sum(study_type == 1)
+  )
+
+table(study_type_count_per_effect$n_original_studies)
+table(study_type_count_per_effect$n_replication_studies)
+
+S2 <- left_join(studies, effects, by="study_id")
+
+S2$study_type_label <- factor(S2$study_type, levels=c(0, 1), labels=c("original", "replication"))
+S2$is_null <- factor(S2$true_effect_size == 0, levels=c(TRUE, FALSE), labels=c("null", "non-null"))
+
+ggplot(S2, aes(
+  x=novelty_contribution, y=truth_contribution, 
+  color=study_type_label,
+  size=true_effect_size
+)) +
+  geom_point(alpha=0.3) +
+  facet_wrap(is_null~study_type_label) +
+  labs(title = TITLE, color="Study Type")

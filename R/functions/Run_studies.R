@@ -51,6 +51,20 @@ run_studies <- function(sim_env, verbose=FALSE) {
 
   # Determine study types and assign effects
   assign_effects(sim_env, verbose=verbose)
+
+  ## Unit test: Each effect is assigned to maximally one original study
+  studies <- sim_env$studies |> as.data.frame() |> filter(!is.na(study_id))
+  testthat::equals("Each effect assigned to maximally one original study", {
+    study_type_count_per_effect <- studies |> group_by(effect_id) |> 
+      summarise(
+        n_original_studies = sum(study_type == 0),
+        n_replication_studies = sum(study_type == 1)
+      )
+
+    length(names(original_study_count_per_effect)) == 1 && names(original_study_count_per_effect) == "1"
+  })
+  
+
   
   # Calculate reference effects and sample sizes
   determine_sample_sizes(sim_env)
