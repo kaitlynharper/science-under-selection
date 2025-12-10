@@ -14,7 +14,7 @@
 # update_effects_beliefs: update effects matrix with new posterior beliefs
 
 #### assign_effects ####
-assign_effects <- function(sim_env) {
+assign_effects <- function(sim_env, verbose=FALSE) {
 
 # create a local copy of the non-empty studies to speed up selection
   studies <- sim_env$studies[!is.na(sim_env$studies[, "study_id"]), ]
@@ -30,12 +30,15 @@ assign_effects <- function(sim_env) {
   published_completed <- studies[, "publication_status"] == 1 &
     !is.na(studies[, "timestep_completed"]) &
     studies[, "timestep_completed"] <= sim_env$timestep
+
   available_original_effects <- sim_env$effects[
     !sim_env$effects[, "effect_id"] %in%
       studies[published_completed, "effect_id"] &
     !is.na(sim_env$effects[, "effect_id"]),
     "effect_id"
   ]
+
+  if (verbose) print(paste0("Available original effects: ", length(available_original_effects)))
   
   # identify available effect_ids for replication studies
   available_replication_effects <- unique(studies[

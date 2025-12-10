@@ -50,7 +50,7 @@ run_studies <- function(sim_env, verbose=FALSE) {
   sim_env$new_studies <- new_studies
 
   # Determine study types and assign effects
-  assign_effects(sim_env)
+  assign_effects(sim_env, verbose=verbose)
   
   # Calculate reference effects and sample sizes
   determine_sample_sizes(sim_env)
