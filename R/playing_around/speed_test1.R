@@ -31,7 +31,7 @@ params <- list(
   nonsig_logistic_midpoint = .5, # novelty midpoint for non-significant results
   nonsig_logistic_steepness = 3, # steepness of logistic curve for non-significant results
   # Career turnover parameters
-  selection_condition = 0, # 0 = selection based on truth, 1 = selection based on novelty
+  initial_selection_condition = 0, # 0 = selection based on truth, 1 = selection based on novelty
   career_turnover_selection_rate = 0.5, # proportion of agents to retire each career step
   innovation_sd = 0.05, # standard deviation of innovation noise added to new agents
   hold_samples_constant_at = 100, # if NA, sample sizes are calculated; if a value, all studies use that sample size

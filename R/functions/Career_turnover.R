@@ -16,7 +16,7 @@ career_turnover <- function(sim_env, verbose=FALSE) {
 
   #### Calculate career_contribution for each active agent ####
   # Determine contribution column based on selection condition
-  contribution_column <- if (sim_env$selection_condition == 0) {
+  contribution_column <- if (sim_env$current_selection_condition == 0) {
     "truth_contribution"
   } else {
     "novelty_contribution"
@@ -61,7 +61,7 @@ career_turnover <- function(sim_env, verbose=FALSE) {
   surviving_indices <- active_indices[-which_to_retire]
 
   if (verbose) {
-    print("------- Career Turnover -------")
+    print(paste0("------- Career Turnover: Selecting on ", contribution_column, " -------"))
     print(paste0("How many agents retiring: ", length(which_to_retire)))
   }
   

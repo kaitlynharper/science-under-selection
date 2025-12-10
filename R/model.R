@@ -16,6 +16,10 @@ run_simulation <- function(params, verbose=1) {
     sim_env[[param_name]] <- params[[param_name]]
   }
 
+  # initialize the current selection condition
+  # eventually, this will be switched during the simulation if specified
+  sim_env$current_selection_condition <- sim_env$initial_selection_condition
+
   #### Initialize model ####
 
   # Initialize effects matrix
@@ -59,7 +63,7 @@ run_simulation <- function(params, verbose=1) {
     ) {
       if (!is.na(sim_env$switch_conditions_at)) {
         if (sim_env$switch_conditions_at == sim_env$timestep) {
-          sim_env$selection_condition <- 1 - sim_env$selection_condition
+          sim_env$current_selection_condition <- 1 - sim_env$initial_selection_condition
         }
       }
       career_turnover(sim_env, verbose = verbose > 1)

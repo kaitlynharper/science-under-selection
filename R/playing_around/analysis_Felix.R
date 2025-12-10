@@ -57,9 +57,23 @@ p3 <- ggplot(res2, aes(x=timestep, y=n_effects_investigated)) +
   geom_line() +
   labs(y="Cumulative number of effects published")
 
-TITLE <- paste0("n = ", results$hold_samples_constant_at,
-                ", PB = ", results$publication_bias, 
-                ", selection on ", ifelse(results$selection_condition == 0, "truth", "novelty"), 
+# add horizontal line at selection switch time if applicable
+if (!is.na(results$switch_conditions_at)) {
+  p1 <- p1 + geom_vline(xintercept = results$switch_conditions_at, linetype="dashed", color="grey60")
+  p2 <- p2 + geom_vline(xintercept = results$switch_conditions_at, linetype="dashed", color="grey60")
+  p3 <- p3 + geom_vline(xintercept = results$switch_conditions_at, linetype="dashed", color="grey60")
+}
+
+TITLE <- paste0("n = ", results$hold_samples_constant_at, ", ",
+                ifelse(results$publication_bias == 1, "with", "without"), " PB", 
+                ", selection on ", 
+                  ifelse(is.na(results$switch_conditions_at),
+                    ifelse(results$initial_selection_condition == 0, "truth", "novelty"), 
+                    ifelse(results$initial_selection_condition == 0, 
+                      paste0("truth -> novelty at t=", results$switch_conditions_at),
+                      paste0("novelty -> truth at t=", results$switch_conditions_at)
+                    )
+                  ),
                 ", a = ", results$n_agents, " agents")
 
 patchwork <- p1 + p2 + p3

@@ -47,7 +47,7 @@ params <- list(
   nonsig_logistic_steepness = 3, # steepness of logistic curve for non-significant results
 
   # Career turnover parameters
-  selection_condition = 1, # 0 = selection based on truth, 1 = selection based on novelty
+  initial_selection_condition = 1, # 0 = selection based on truth, 1 = selection based on novelty
   switch_conditions_at = NA, # if NA, no switch; if a value, condition switches at that timestep
   career_turnover_selection_rate = 0.5, # proportion of agents to retire each career step
   innovation_sd = 0.05, # standard deviation of innovation noise added to new agents

@@ -24,7 +24,7 @@ source(here("R", "model.R"))
 params <- list(
   # Parameters for agents and study design
   n_agents = 200, # number of agents
-  n_timesteps = 300, # number of timesteps
+  n_timesteps = 400, # number of timesteps
   n_timesteps_per_career_step = 10, # number of timesteps per career phase
   duration_per_observation = 0.1, # TODO calibration required # timesteps per observations
   duration_original_intercept = 1, # TODO calibration required # base timesteps for original studies
@@ -47,11 +47,11 @@ params <- list(
   nonsig_logistic_steepness = 3, # steepness of logistic curve for non-significant results
 
   # Career turnover parameters
-  selection_condition = 1, # 0 = selection based on truth, 1 = selection based on novelty
-  switch_conditions_at = NA, # if NA, no switch; if a value, condition switches at that timestep
+  initial_selection_condition = 0, # 0 = selection based on truth, 1 = selection based on novelty
+  switch_conditions_at = 200, # if NA, no switch; if a value, condition switches at that timestep
   career_turnover_selection_rate = 0.5, # proportion of agents to retire each career step
   innovation_sd = 0.05, # standard deviation of innovation noise added to new agents
-  hold_samples_constant_at = 20, # if NA, sample sizes are calculated; if a value, all studies use that sample size
+  hold_samples_constant_at = 30, # if NA, sample sizes are calculated; if a value, all studies use that sample size
   publication_bias = 1 #0 = no publication bias, 1 = publication bias
 )
 
