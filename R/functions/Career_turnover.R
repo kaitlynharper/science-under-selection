@@ -82,7 +82,7 @@ career_turnover <- function(sim_env, verbose=FALSE) {
       replace = TRUE
     ) +
       rnorm(n_retire, 0, sim_env$innovation_sd)
-    new_powers <- pmax(0, pmin(1, new_powers)) # ensure powers are between 0 and 1
+    new_powers <- pmax(0.01, pmin(0.99, new_powers)) # ensure powers are between 0.01 and 0.99
 
     add_agents(
       sim_env = sim_env,
