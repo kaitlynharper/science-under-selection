@@ -49,10 +49,10 @@ apply_publication_bias <- function(sim_env) {
   }
   
   if(sim_env$publication_bias == 2){ # Strong publication bias
-    sim_env$sig_y_intercept = 0.5 # minimum publication probability for p < .05 results
-    sim_env$sig_logistic_midpoint = 0.5 # novelty midpoint for significant results
+    sim_env$sig_y_intercept = 0.8 # minimum publication probability for p < .05 results
+    sim_env$sig_logistic_midpoint = 0.2 # novelty midpoint for significant results
     sim_env$sig_logistic_steepness = 3 # steepness of logistic curve for significant results
-    sim_env$nonsig_logistic_midpoint = 1.5 # novelty midpoint for non-significant results
+    sim_env$nonsig_logistic_midpoint = 3 # novelty midpoint for non-significant results
     sim_env$nonsig_logistic_steepness = 3 # steepness of logistic curve for non-significant results
   }
   

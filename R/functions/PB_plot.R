@@ -8,14 +8,14 @@
 
 # Medium PB:
 plot_PB(
-  sig_y_intercept = .2, sig_logistic_midpoint = 5, 
-  sig_logistic_steepness = 1, nonsig_logistic_midpoint = 1.5, 
-  nonsig_logistic_steepness = 3, subtitle="Medium PB", max_novelty = 10)
+  sig_y_intercept = .5, sig_logistic_midpoint = 0.5, 
+  sig_logistic_steepness = 3, nonsig_logistic_midpoint = 1.5, 
+  nonsig_logistic_steepness = 3, subtitle="Medium PB")
 
 # Strong PB:
 plot_PB(
   sig_y_intercept = 0.8, sig_logistic_midpoint = 0.2, 
-  sig_logistic_steepness = 3, nonsig_logistic_midpoint = 3.5, 
+  sig_logistic_steepness = 3, nonsig_logistic_midpoint = 2.5, 
   nonsig_logistic_steepness = 3, subtitle="Strong PB")
 
 

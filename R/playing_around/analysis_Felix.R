@@ -66,8 +66,16 @@ if (!is.na(results$switch_conditions_at)) {
   p3 <- p3 + geom_vline(xintercept = results$switch_conditions_at, linetype="dashed", color="grey60")
 }
 
+switch(as.character(results$publication_bias),
+"0"="no",
+"1"="weak",
+"2"="strong")
+
 TITLE <- paste0("n = ", results$hold_samples_constant_at, ", ",
-                ifelse(results$publication_bias == 1, "with", "without"), " PB", 
+                switch(as.character(results$publication_bias),
+                  "0"="no",
+                  "1"="weak",
+                  "2"="strong"), " PB", 
                 ", selection on ", 
                   ifelse(is.na(results$switch_conditions_at),
                     ifelse(results$initial_selection_condition == 0, "truth", "novelty"), 
@@ -144,3 +152,20 @@ S2 |>
 # # show histogram of line 7: 
 # S2 |> filter(study_type == 1, true_effect_size==0, publication_status==1) |>
 #   pull("estimated_mean") |> hist(main="Published original studies of a true null", xlab="")
+
+
+
+## FPR, PPV etc. of published literature
+
+
+
+# sanity check: Of all conducted H0-studies, 5% should have a p-value < .05
+nrow(S2 |> filter(true_effect_size == 0, p_value < 0.05)) / nrow(S2 |> filter(true_effect_size == 0))
+
+# FPR (nominally should be 5%)
+FPR <- nrow(S2 |> filter(true_effect_size == 0, p_value < 0.05, publication_status==1)) / nrow(S2 |> filter(true_effect_size == 0, publication_status==1))
+print(paste0("FPR: ", (FPR * 100) |> round(2), "%"))
+
+# How many published studies are significant?
+sig_published <- nrow(S2 |> filter(p_value < 0.05, publication_status==1)) / nrow(S2 |> filter(publication_status==1))
+print(paste0("% of published studies that are significant: ", (sig_published * 100) |> round(2), "%"))
