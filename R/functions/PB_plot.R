@@ -6,17 +6,17 @@
 #' @param nonsig_logistic_midpoint novelty midpoint for non-significant results
 #' @param nonsig_logistic_steepness steepness of logistic curve for non-significant 
 
-# Medium PB:
-plot_PB(
-  sig_y_intercept = .5, sig_logistic_midpoint = 0.5, 
-  sig_logistic_steepness = 3, nonsig_logistic_midpoint = 1.5, 
-  nonsig_logistic_steepness = 3, subtitle="Medium PB")
+# # Medium PB:
+# plot_PB(
+#   sig_y_intercept = .5, sig_logistic_midpoint = 0.5, 
+#   sig_logistic_steepness = 3, nonsig_logistic_midpoint = 1.5, 
+#   nonsig_logistic_steepness = 3, subtitle="Medium PB")
 
 # Strong PB:
-plot_PB(
-  sig_y_intercept = 0.8, sig_logistic_midpoint = 0.2, 
-  sig_logistic_steepness = 3, nonsig_logistic_midpoint = 2.5, 
-  nonsig_logistic_steepness = 3, subtitle="Strong PB")
+# plot_PB(
+#   sig_y_intercept = 0.8, sig_logistic_midpoint = 0.2, 
+#   sig_logistic_steepness = 3, nonsig_logistic_midpoint = 3, 
+#   nonsig_logistic_steepness = 3, subtitle="Strong PB")
 
 
 

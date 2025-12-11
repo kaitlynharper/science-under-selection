@@ -80,14 +80,7 @@ run_studies <- function(sim_env, verbose=FALSE) {
   calculate_novelty_contribution(sim_env)
   calculate_truth_contribution(sim_env)
   
-  # Apply publication bias (only in novelty selection condition)
-  if(sim_env$publication_bias == 0){
-    # All papers are published
-    sim_env$new_studies[, "publication_status"] <- rep(1, n_studies)
-  } else {
-    # Apply publication bias
-    apply_publication_bias(sim_env)
-  }
+  apply_publication_bias(sim_env)
   
   # Update effects matrix with new posterior beliefs
   update_effects_beliefs(sim_env)
