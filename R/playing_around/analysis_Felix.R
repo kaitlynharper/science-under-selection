@@ -52,18 +52,25 @@ p1 <- ggplot(res_long, aes(x=timestep, y=value, color=measure)) +
 
 p2 <- ggplot(res2, aes(x=timestep, y=mean_kl)) +
   geom_point() +
-  geom_line()
+  geom_line() +
+  labs(y="Mean KL divergence between true and believed effect sizes")
 
 p3 <- ggplot(res2, aes(x=timestep, y=n_effects_investigated)) +
   geom_point() +
   geom_line() +
   labs(y="Cumulative number of effects published")
 
+p4 <- ggplot(res2, aes(x=timestep, y=total_kl)) +
+  geom_point() +
+  geom_line() +
+  labs(y="Total KL divergence between true and believed effect sizes")
+
 # add horizontal line at selection switch time if applicable
 if (!is.na(results$switch_conditions_at)) {
   p1 <- p1 + geom_vline(xintercept = results$switch_conditions_at, linetype="dashed", color="grey60")
   p2 <- p2 + geom_vline(xintercept = results$switch_conditions_at, linetype="dashed", color="grey60")
   p3 <- p3 + geom_vline(xintercept = results$switch_conditions_at, linetype="dashed", color="grey60")
+  p4 <- p4 + geom_vline(xintercept = results$switch_conditions_at, linetype="dashed", color="grey60")
 }
 
 switch(as.character(results$publication_bias),
@@ -86,6 +93,7 @@ TITLE <- paste0("n = ", results$hold_samples_constant_at, ", ",
                   ),
                 ", a = ", results$n_agents, " agents")
 
+#patchwork <- (p1 + p2) / (p3 + p4)
 patchwork <- p1 + p2 + p3
 patchwork + plot_annotation(title = TITLE)
 

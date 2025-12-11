@@ -40,11 +40,11 @@ params <- list(
   uninformed_prior_variance = 1, # variance of uninformed prior
 
   # Career turnover parameters
-  initial_selection_condition = 1, # 0 = selection based on truth, 1 = selection based on novelty
+  initial_selection_condition = 0, # 0 = selection based on truth, 1 = selection based on novelty
   switch_conditions_at = NA, # if NA, no switch; if a value, condition switches at that timestep
   career_turnover_selection_rate = 0.5, # proportion of agents to retire each career step
   innovation_sd = 0.05, # standard deviation of innovation noise added to new agents
-  hold_samples_constant_at = 30, # if NA, sample sizes are calculated; if a value, all studies use that sample size
+  hold_samples_constant_at = 300, # if NA, sample sizes are calculated; if a value, all studies use that sample size
   publication_bias = 2 #0 = no publication bias, 1 = weak publication bias, 2 = strong publication bias
 )
 
