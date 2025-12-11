@@ -2,8 +2,7 @@
 # Career turnover function
 ##########################################################################
 
-career_turnover <- function(sim_env, verbose=FALSE) {
-
+career_turnover <- function(sim_env, verbose = FALSE) {
   # create a local copy of the non-empty studies to speed up selection
   studies <- sim_env$studies[!is.na(sim_env$studies[, "study_id"]), ]
 
@@ -24,12 +23,25 @@ career_turnover <- function(sim_env, verbose=FALSE) {
 
   # Filter studies to current career phase and published
   phase_start <- sim_env$timestep - sim_env$n_timesteps_per_career_step + 1
-  in_phase <- which(
-    studies[, "publication_status"] == 1 &
+
+  # Under truth selection, consider all studies
+  if (sim_env$current_selection_condition == 0) {
+    in_phase <- which(
       !is.na(studies[, "timestep_completed"]) &
-      studies[, "timestep_completed"] >= phase_start &
-      studies[, "timestep_completed"] <= sim_env$timestep
-  )
+        studies[, "timestep_completed"] >= phase_start &
+        studies[, "timestep_completed"] <= sim_env$timestep
+    )
+  }
+
+  # Under novelty selection, only consider published studies
+  if (sim_env$current_selection_condition == 1) {
+    in_phase <- which(
+      studies[, "publication_status"] == 1 &
+        !is.na(studies[, "timestep_completed"]) &
+        studies[, "timestep_completed"] >= phase_start &
+        studies[, "timestep_completed"] <= sim_env$timestep
+    )
+  }
 
   # Sum contributions by researcher_id using rowsum
   contribution_sums <- rowsum(
@@ -61,10 +73,14 @@ career_turnover <- function(sim_env, verbose=FALSE) {
   surviving_indices <- active_indices[-which_to_retire]
 
   if (verbose) {
-    print(paste0("------- Career Turnover: Selecting on ", contribution_column, " -------"))
+    print(paste0(
+      "------- Career Turnover: Selecting on ",
+      contribution_column,
+      " -------"
+    ))
     print(paste0("How many agents retiring: ", length(which_to_retire)))
   }
-  
+
   if (length(which_to_retire > 0)) {
     #only add agents if needed
     # sample from survivors and add innovation noise
