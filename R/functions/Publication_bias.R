@@ -29,7 +29,32 @@ logistic_nonsignificant <- function(
 #### apply_publication_bias ####
 # Determine which studies get published based on significance and novelty
 apply_publication_bias <- function(sim_env) {
+  
   n_studies <- nrow(sim_env$new_studies)
+  
+  #### Define publication bias parameters based on publication_bias level ####
+  
+  if(sim_env$publication_bias == 0){ #No publication bias
+    # All papers are published
+    sim_env$new_studies[, "publication_status"] <- rep(1, n_studies)
+    return()
+  }
+  
+  if(sim_env$publication_bias == 1){ # Weak publication bias
+    sim_env$sig_y_intercept = 0.5 # minimum publication probability for p < .05 results
+    sim_env$sig_logistic_midpoint = 0.5 # novelty midpoint for significant results
+    sim_env$sig_logistic_steepness = 3 # steepness of logistic curve for significant results
+    sim_env$nonsig_logistic_midpoint = 1.5 # novelty midpoint for non-significant results
+    sim_env$nonsig_logistic_steepness = 3 # steepness of logistic curve for non-significant results
+  }
+  
+  if(sim_env$publication_bias == 2){ # Strong publication bias
+    sim_env$sig_y_intercept = 0.5 # minimum publication probability for p < .05 results
+    sim_env$sig_logistic_midpoint = 0.5 # novelty midpoint for significant results
+    sim_env$sig_logistic_steepness = 3 # steepness of logistic curve for significant results
+    sim_env$nonsig_logistic_midpoint = 1.5 # novelty midpoint for non-significant results
+    sim_env$nonsig_logistic_steepness = 3 # steepness of logistic curve for non-significant results
+  }
   
   # determine if each study is significant
   is_significant <- sim_env$new_studies[, "p_value"] < 0.05
@@ -57,3 +82,4 @@ apply_publication_bias <- function(sim_env) {
     runif(n_studies) < publication_prob
   )
 }
+  

@@ -39,20 +39,13 @@ params <- list(
   uninformed_prior_mean = 0, # mean of uninformed prior
   uninformed_prior_variance = 1, # variance of uninformed prior
 
-  # Publication bias parameters # TODO calibration required
-  sig_y_intercept = 0.5, # minimum publication probability for p < .05 results
-  sig_logistic_midpoint = 0.5, # novelty midpoint for significant results
-  sig_logistic_steepness = 3, # steepness of logistic curve for significant results
-  nonsig_logistic_midpoint = 1.5, # novelty midpoint for non-significant results
-  nonsig_logistic_steepness = 3, # steepness of logistic curve for non-significant results
-
   # Career turnover parameters
   initial_selection_condition = 1, # 0 = selection based on truth, 1 = selection based on novelty
   switch_conditions_at = NA, # if NA, no switch; if a value, condition switches at that timestep
   career_turnover_selection_rate = 0.5, # proportion of agents to retire each career step
-  innovation_sd = 0.05, # standard deviation of innovation noise added to new agents
-  hold_samples_constant_at = 20, # if NA, sample sizes are calculated; if a value, all studies use that sample size
-  publication_bias = 1 #0 = no publication bias, 1 = publication bias
+  innovation_sd = 0, # standard deviation of innovation noise added to new agents
+  hold_samples_constant_at = 30, # if NA, sample sizes are calculated; if a value, all studies use that sample size
+  publication_bias = 1 #0 = no publication bias, 1 = weak publication bias, 2 = strong publication bias
 )
 
 # Uncomment code below to allow run_conditions.R script to overwrite parameter values
