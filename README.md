@@ -6,6 +6,30 @@ This repository will hold an agent-based model of academia developed to explore 
 
 **Felix Schönbrodt** Professor at the Department of Psychology at LMU, Director of LMU Open Science Center, Principle Investigator of this project. Leads research on metascience, replicability, and statistics/methods. Personal website: https://www.nicebread.de/
 
+## Repository Structure
+
+```
+├── R/
+│   ├── model.R              # Main simulation function (run_simulation)
+│   ├── run_simulation.R     # Run a single simulation with parameters
+│   ├── run_conditions.R     # Batch runs across parameter combinations
+│   ├── analysis.R           # Visualization and analysis functions
+│   ├── functions/           # Core model components
+│   │   ├── initialize_agents_matrix.R
+│   │   ├── initialize_effects_matrix.R
+│   │   ├── Initialize_studies_matrix.R
+│   │   ├── Add_agents.R
+│   │   ├── Run_studies.R
+│   │   ├── Run_studies_helpers.R
+│   │   ├── Publication_bias.R
+│   │   ├── Career_turnover.R
+│   │   └── extract_belief_accuracy.R
+│   └── playing_around/      # Preliminary/experimental scripts
+│       └── analysis_Felix.R # Most developed analysis script
+├── docs/                    # Manuscript and documentation (including ODD preregistration document)
+└── tests/                   # Unit tests (none yet) 
+```
+
 ## Getting started
 
 [these are preliminary notes]
