@@ -6,6 +6,9 @@
 
 library(here)
 
+# Set run conditions parameter so that run_simulations script works with these parameters
+run_conditions <- 1
+
 # Set lists of condition parameters
 initial_selection_condition_list <- c(0, 0, 0, 0, 1, 1, 1, 1)
 publication_bias_list <- c(0, 0, 2, 2, 0, 0, 2, 2)
