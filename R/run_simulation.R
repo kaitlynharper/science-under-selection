@@ -48,7 +48,7 @@ params <- list(
   publication_bias = 2 #0 = no publication bias, 1 = weak publication bias, 2 = strong publication bias
 )
 
-if (run_conditions == 1) {
+if (exists("run_conditions")) {
   params$n_timesteps <- n_timesteps
   params$initial_selection_condition <- initial_selection_condition
   params$switch_conditions_at <- switch_conditions_at
