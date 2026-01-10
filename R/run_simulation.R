@@ -44,7 +44,8 @@ params <- list(
   switch_conditions_at = NA, # if NA, no switch; if a value, condition switches at that timestep
   career_turnover_selection_rate = 0.5, # proportion of agents to retire each career step
   innovation_sd = 0, # standard deviation of innovation noise added to new agents
-  hold_samples_constant_at = 300, # if NA, sample sizes are calculated; if a value, all studies use that sample size
+  mutation_rate = 0, # probability that a new agent's replication_probability flips (0->1 or 1->0)
+  hold_samples_constant_at = 30, # if NA, sample sizes are calculated; if a value, all studies use that sample size
   publication_bias = 2 #0 = no publication bias, 1 = weak publication bias, 2 = strong publication bias
 )
 

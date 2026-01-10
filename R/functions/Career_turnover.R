@@ -92,6 +92,12 @@ career_turnover <- function(sim_env, verbose = FALSE) {
       rnorm(n_retire, 0, sim_env$innovation_sd)
     new_rep_probs <- pmax(0, pmin(1, new_rep_probs)) # ensure probabilities are between 0 and 1
 
+    # apply mutation: flip replication_probability (0->1 or 1->0) with mutation_rate probability
+    if (sim_env$mutation_rate > 0) {
+      will_mutate <- runif(n_retire) < sim_env$mutation_rate
+      new_rep_probs[will_mutate] <- 1 - new_rep_probs[will_mutate]
+    }
+
     new_powers <- sample(
       sim_env$agents[surviving_indices, "target_power"],
       n_retire,
