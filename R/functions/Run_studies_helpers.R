@@ -14,41 +14,51 @@
 # update_effects_beliefs: update effects matrix with new posterior beliefs
 
 #### assign_effects ####
-assign_effects <- function(sim_env, verbose=FALSE) {
-
-# create a local copy of the non-empty studies to speed up selection
+assign_effects <- function(sim_env, verbose = FALSE) {
+  # create a local copy of the non-empty studies to speed up selection
   studies <- sim_env$studies[!is.na(sim_env$studies[, "study_id"]), ]
 
   n_studies <- nrow(sim_env$new_studies)
-  
+
   # determine study types based on each agent's replication_probability
-  sim_env$is_replication <- runif(n_studies) < sim_env$new_studies[, "replication_probability"]
+  sim_env$is_replication <- runif(n_studies) <
+    sim_env$new_studies[, "replication_probability"]
   sim_env$new_studies[, "study_type"] <- ifelse(sim_env$is_replication, 1, 0)
-    
-  # A vector flagging studies that are completed and published
+
+  # A vector flagging studies that are completed and published (i.e., public knowledge)
   published_completed <- studies[, "publication_status"] == 1 &
     !is.na(studies[, "timestep_completed"]) &
     studies[, "timestep_completed"] <= sim_env$timestep
 
-  # A vector flagging studies that are "in progress"
-  in_progress <- studies[, "timestep_completed"] > sim_env$timestep
-
-  # A vector flagging unpublished studies (i.e., the file drawer)
+  # A vector flagging studies that are completed and unpublished (i.e., the file drawer)
   unpublished_completed <- studies[, "publication_status"] == 0 &
-      studies[, "timestep_completed"] <= sim_env$timestep
+    studies[, "timestep_completed"] <= sim_env$timestep
+
+  # A vector flagging studies that are "in progress" and published (will become public knowledge)
+  published_in_progress <- studies[, "publication_status"] == 1 &
+    studies[, "timestep_completed"] > sim_env$timestep
+
+  # A vector flagging studies that are "in progress" and unpublished (will go in the file drawer)
+  unpublished_in_progress <- studies[, "publication_status"] == 0 &
+    studies[, "timestep_completed"] > sim_env$timestep
 
   # studies in the data frame are either "completed" or "in_progress" or "unpublished"
-  test <- (cbind(published_completed, in_progress, unpublished_completed) |> rowSums())
-  stopifnot(all(test==1))
-
+  test <- (cbind(
+    published_completed,
+    unpublished_completed,
+    published_in_progress,
+    unpublished_in_progress
+  ) |>
+    rowSums())
+  stopifnot(all(test == 1))
 
   published_completed_effect_ids <- unique(studies[
-    published_completed & !is.na(studies[, "effect_id"]),  
+    published_completed & !is.na(studies[, "effect_id"]),
     "effect_id"
   ])
 
-  in_progress_effect_ids <- unique(studies[
-    in_progress & !is.na(studies[, "effect_id"]),  
+  published_in_progress_effect_ids <- unique(studies[
+    published_in_progress & !is.na(studies[, "effect_id"]),
     "effect_id"
   ])
 
@@ -56,20 +66,32 @@ assign_effects <- function(sim_env, verbose=FALSE) {
 
   # TODO DOCUMENT: Eligible effects for original studies are those that
   # have not yet been published in completed studies and are not currently being
-  # investigated in in-progress studies. The latter is a bit unrealistic 
+  # investigated in in-progress studies. The latter is a bit unrealistic
   # (as agents would need to know what effects all others are currently working on), but helps
   # avoiding conflicts where multiple original studies try to use the same effect_id.
 
   available_original_effects <- sim_env$effects[
     !sim_env$effects[, "effect_id"] %in% published_completed_effect_ids &
-    !sim_env$effects[, "effect_id"] %in% in_progress_effect_ids &
-    !is.na(sim_env$effects[, "effect_id"]),
+      !sim_env$effects[, "effect_id"] %in% published_in_progress_effect_ids &
+      !is.na(sim_env$effects[, "effect_id"]),
     "effect_id"
   ]
 
-  if (verbose) print(paste0("Available original effects: ", length(available_original_effects)))
-  
+  if (verbose) {
+    print(paste0(
+      "Available original effects: ",
+      length(available_original_effects)
+    ))
+  }
+
+  # TODO DOCUMENT: Eligible effects for replication studies are those that
+  # have already been completed and published at least once. Then, when
+  # assigning the replication effect IDs, we also consider in-progress replications
+  # so that these effects are lower on the priority list for replication (currently priority only
+  # considers how many times an effect has been published, no other factors)
+
   # if not enough available effects for replication, convert excess to originals
+  # (all completed published studies can be replicated, even if they a replication is already completed or in progress)
   if (sum(sim_env$is_replication) > length(published_completed_effect_ids)) {
     excess_replications <- sum(sim_env$is_replication) -
       sum(!is.na(published_completed_effect_ids))
@@ -80,46 +102,56 @@ assign_effects <- function(sim_env, verbose=FALSE) {
     sim_env$is_replication[convert_indices] <- FALSE
     sim_env$new_studies[convert_indices, "study_type"] <- 0
   }
-  
+
   # stop if not enough original effects left
-  if(sum(!sim_env$is_replication) > length(available_original_effects)){
+  if (sum(!sim_env$is_replication) > length(available_original_effects)) {
     stop("Insufficient original effects at timestep ", sim_env$timestep)
   }
-  
+
   # assign effect_ids to original studies (without replacement)
   sim_env$new_studies[!sim_env$is_replication, "effect_id"] <- sample(
     available_original_effects,
     size = sum(!sim_env$is_replication),
     replace = FALSE
   )
-  
+
   # assign effect_ids to replication studies
-  # count total publications per effect (only completed studies)
-  publication_counts <- table(studies[
-    published_completed & !is.na(studies[, "effect_id"]),
-    "effect_id"
-  ])
+  # count publications including in-progress to deprioritize effects already being studied
+  # (only effects with completed studies are actually replicable)
+  replicable_studies <- (published_completed | published_in_progress) &
+    !is.na(studies[, "effect_id"]) &
+    studies[, "effect_id"] %in% published_completed_effect_ids
+
+  publication_counts <- table(studies[replicable_studies, "effect_id"])
   # add small random jitter to order effects randomly within each count level
-  jittered_counts <- as.numeric(publication_counts) + runif(length(publication_counts)) * 0.01
+  jittered_counts <- as.numeric(publication_counts) +
+    runif(length(publication_counts)) * 0.01
   # order effect ids by jittered counts (ascending = fewer publications first)
-  ordered_effects <- as.numeric(names(publication_counts)[order(jittered_counts)])
+  ordered_effects <- as.numeric(names(publication_counts)[order(
+    jittered_counts
+  )])
   # assign from ordered list (without replacement)
-  sim_env$new_studies[sim_env$is_replication, "effect_id"] <- ordered_effects[1:sum(sim_env$is_replication)]
+  sim_env$new_studies[sim_env$is_replication, "effect_id"] <- ordered_effects[
+    1:sum(sim_env$is_replication)
+  ]
 }
 
 #### determine_sample_sizes ####
 determine_sample_sizes <- function(sim_env) {
   n_studies <- nrow(sim_env$new_studies)
-  
+
   # if hold_samples_constant_at is set, use that value for all studies
   if (!is.na(sim_env$hold_samples_constant_at)) {
-    sim_env$new_studies[, "sample_size"] <- rep(sim_env$hold_samples_constant_at, n_studies)
+    sim_env$new_studies[, "sample_size"] <- rep(
+      sim_env$hold_samples_constant_at,
+      n_studies
+    )
     return()
   }
-  
+
   # calculate reference effects
   reference_effects <- numeric(n_studies)
-  
+
   # originals: burn-in medium or mean published
   if (sim_env$timestep < sim_env$n_timesteps_per_career_step) {
     reference_effects[!sim_env$is_replication] <- 0.5
@@ -131,24 +163,27 @@ determine_sample_sizes <- function(sim_env) {
     published_effects <- sim_env$studies[published_completed, "estimated_mean"]
     reference_effects[!sim_env$is_replication] <- mean(published_effects)
   }
-  
+
   # replications: use original effect if significant, otherwise medium
   if (sum(sim_env$is_replication) > 0) {
     # filter to published original studies (completed only)
-    pub_orig <- sim_env$studies[, "study_type"] == 0 & 
-                sim_env$studies[, "publication_status"] == 1 &
-                !is.na(sim_env$studies[, "timestep_completed"]) &
-                sim_env$studies[, "timestep_completed"] <= sim_env$timestep &
-                !is.na(sim_env$studies[, "estimated_mean"])
-    
+    pub_orig <- sim_env$studies[, "study_type"] == 0 &
+      sim_env$studies[, "publication_status"] == 1 &
+      !is.na(sim_env$studies[, "timestep_completed"]) &
+      sim_env$studies[, "timestep_completed"] <= sim_env$timestep &
+      !is.na(sim_env$studies[, "estimated_mean"])
+
     # match replication effect_ids to published originals
     rep_effect_ids <- sim_env$new_studies[sim_env$is_replication, "effect_id"]
-    orig_indices <- match(rep_effect_ids, sim_env$studies[pub_orig, "effect_id"])
-    
+    orig_indices <- match(
+      rep_effect_ids,
+      sim_env$studies[pub_orig, "effect_id"]
+    )
+
     # extract means and p-values for matched originals
     orig_means <- sim_env$studies[pub_orig, "estimated_mean"][orig_indices]
     orig_pvals <- sim_env$studies[pub_orig, "p_value"][orig_indices]
-    
+
     # use original effect if p < 0.05, otherwise 0.5
     reference_effects[sim_env$is_replication] <- ifelse(
       orig_pvals < 0.05,
@@ -156,7 +191,7 @@ determine_sample_sizes <- function(sim_env) {
       0.5
     )
   }
-  
+
   # calculate sample sizes with appropriate test type
   sample_sizes <- mapply(
     function(power, delta, alt) {
@@ -181,83 +216,97 @@ determine_sample_sizes <- function(sim_env) {
 determine_study_durations <- function(sim_env) {
   # calculate duration: intercept (originals only) + coefficient * sample_size
   durations <- ceiling(
-    ifelse(sim_env$is_replication, 0, sim_env$duration_original_intercept) + 
-    sim_env$duration_per_observation * sim_env$new_studies[, "sample_size"]
+    ifelse(sim_env$is_replication, 0, sim_env$duration_original_intercept) +
+      sim_env$duration_per_observation * sim_env$new_studies[, "sample_size"]
   )
-  
+
   # calculate when studies will be complete
   sim_env$new_studies[, "timestep_completed"] <- sim_env$timestep + durations
-  
+
   # update agents matrix: when each researcher will be ready for next paper
   agent_indices <- match(
-    sim_env$new_studies[, "researcher_id"], 
+    sim_env$new_studies[, "researcher_id"],
     sim_env$agents[, "researcher_id"]
   )
-  sim_env$agents[agent_indices, "timestep_next_paper"] <- sim_env$new_studies[, "timestep_completed"]
+  sim_env$agents[agent_indices, "timestep_next_paper"] <- sim_env$new_studies[,
+    "timestep_completed"
+  ]
 }
 
 #### generate_study_results ####
 generate_study_results <- function(sim_env) {
   n_studies <- nrow(sim_env$new_studies)
-  
+
   # get true effect sizes for each study's effect
   effect_indices <- match(
     sim_env$new_studies[, "effect_id"],
     sim_env$effects[, "effect_id"]
   )
   true_effects <- sim_env$effects[effect_indices, "true_effect_size"]
-  
+
   # get sample sizes
   sample_sizes <- sim_env$new_studies[, "sample_size"]
-  
+
   # simulate observed t-statistics using noncentral t-distribution
   # (when ncp = 0, this is a central t-distribution)
   ncp <- sqrt(sample_sizes / 2) * true_effects
   df <- 2 * (sample_sizes - 1)
   t_obs <- stats::rt(n = n_studies, df = df, ncp = ncp)
-  
+
   # convert t-statistics to cohen's d
   d_obs <- t_obs * sqrt(2 / sample_sizes)
-  
+
   # calculate standard error of cohen's d using Hedges–Olkin SE(d) formula
   # for equal groups where sample_sizes is n per group
   # TODO more research on how this SE fits with our Bayesian approach
   se_obs <- sqrt(2 / sample_sizes + d_obs^2 / (4 * sample_sizes))
-  
+
   # calculate p-values
   p_obs <- numeric(n_studies)
-  
+
   # replications: one-sided test in direction of original study
   if (sum(sim_env$is_replication) > 0) {
     # filter to published original studies (completed only)
-    pub_orig <- sim_env$studies[, "study_type"] == 0 & 
-                sim_env$studies[, "publication_status"] == 1 &
-                !is.na(sim_env$studies[, "timestep_completed"]) &
-                sim_env$studies[, "timestep_completed"] <= sim_env$timestep &
-                !is.na(sim_env$studies[, "estimated_mean"])
-    
+    pub_orig <- sim_env$studies[, "study_type"] == 0 &
+      sim_env$studies[, "publication_status"] == 1 &
+      !is.na(sim_env$studies[, "timestep_completed"]) &
+      sim_env$studies[, "timestep_completed"] <= sim_env$timestep &
+      !is.na(sim_env$studies[, "estimated_mean"])
+
     # match replication effect_ids to published originals
     rep_effect_ids <- sim_env$new_studies[sim_env$is_replication, "effect_id"]
-    orig_indices <- match(rep_effect_ids, sim_env$studies[pub_orig, "effect_id"])
-    
+    orig_indices <- match(
+      rep_effect_ids,
+      sim_env$studies[pub_orig, "effect_id"]
+    )
+
     # extract direction from matched originals
     orig_direction <- sim_env$studies[pub_orig, "estimated_mean"][orig_indices]
-    
+
     # test in same direction as original
     p_obs[sim_env$is_replication] <- ifelse(
       orig_direction > 0,
-      stats::pt(t_obs[sim_env$is_replication], df[sim_env$is_replication], lower.tail = FALSE),
-      stats::pt(t_obs[sim_env$is_replication], df[sim_env$is_replication], lower.tail = TRUE)
+      stats::pt(
+        t_obs[sim_env$is_replication],
+        df[sim_env$is_replication],
+        lower.tail = FALSE
+      ),
+      stats::pt(
+        t_obs[sim_env$is_replication],
+        df[sim_env$is_replication],
+        lower.tail = TRUE
+      )
     )
   }
-  
+
   # originals: two-sided test
-  p_obs[!sim_env$is_replication] <- 2 * stats::pt(
-    abs(t_obs[!sim_env$is_replication]),
-    df[!sim_env$is_replication],
-    lower.tail = FALSE
-  )
-  
+  p_obs[!sim_env$is_replication] <- 2 *
+    stats::pt(
+      abs(t_obs[!sim_env$is_replication]),
+      df[!sim_env$is_replication],
+      lower.tail = FALSE
+    )
+
   # store results
   sim_env$new_studies[, "estimated_mean"] <- d_obs
   sim_env$new_studies[, "estimated_se"] <- se_obs
@@ -274,32 +323,37 @@ kl_norm <- function(mu0, sd0, mu1, sd1) {
 prepare_bayesian_data <- function(sim_env) {
   # grab most recent entry for each effect_id
   # (effects matrix accumulates multiple rows per effect as beliefs update)
-  
+
   # identify latest rows for each effect_id
   is_latest <- !duplicated(sim_env$effects[, "effect_id"], fromLast = TRUE)
-  
+
   # match studies to their latest effect rows
   effect_match <- match(
     sim_env$new_studies[, "effect_id"],
     sim_env$effects[is_latest, "effect_id"]
   )
   effect_rows <- which(is_latest)[effect_match]
-  
+
   # extract data needed for bayesian update and kl calculations
   sim_env$prior_means <- sim_env$effects[effect_rows, "posterior_effect_size"]
-  sim_env$prior_vars <- sim_env$effects[effect_rows, "posterior_effect_variance"]
+  sim_env$prior_vars <- sim_env$effects[
+    effect_rows,
+    "posterior_effect_variance"
+  ]
   sim_env$true_means <- sim_env$effects[effect_rows, "true_effect_size"]
   sim_env$true_vars <- sim_env$effects[effect_rows, "true_effect_variance"]
-  
+
   # likelihood from study results
   likelihood_means <- sim_env$new_studies[, "estimated_mean"]
   likelihood_vars <- sim_env$new_studies[, "estimated_se"]^2
-  
+
   # bayesian update (normal-normal conjugacy)
   posterior_vars <- 1 / (1 / sim_env$prior_vars + 1 / likelihood_vars)
-  posterior_means <- (sim_env$prior_means / sim_env$prior_vars + 
-                      likelihood_means / likelihood_vars) * posterior_vars
-  
+  posterior_means <- (sim_env$prior_means /
+    sim_env$prior_vars +
+    likelihood_means / likelihood_vars) *
+    posterior_vars
+
   # save new posteriors in environment
   sim_env$new_posterior_means <- posterior_means
   sim_env$new_posterior_vars <- posterior_vars
@@ -314,7 +368,7 @@ calculate_novelty_contribution <- function(sim_env) {
     sim_env$prior_means,
     sqrt(sim_env$prior_vars)
   )
-  
+
   sim_env$new_studies[, "novelty_contribution"] <- novelty
 }
 
@@ -322,23 +376,23 @@ calculate_novelty_contribution <- function(sim_env) {
 calculate_truth_contribution <- function(sim_env) {
   # verisimilitude change = KL(true || prior) - KL(true || posterior)
   # positive when study moved beliefs closer to truth
-  
+
   kl_prior_to_true <- kl_norm(
     sim_env$true_means,
     sqrt(sim_env$true_vars),
     sim_env$prior_means,
     sqrt(sim_env$prior_vars)
   )
-  
+
   kl_posterior_to_true <- kl_norm(
     sim_env$true_means,
     sqrt(sim_env$true_vars),
     sim_env$new_posterior_means,
     sqrt(sim_env$new_posterior_vars)
   )
-  
+
   truth <- kl_prior_to_true - kl_posterior_to_true
-  
+
   sim_env$new_studies[, "truth_contribution"] <- truth
 }
 
@@ -347,22 +401,22 @@ update_effects_beliefs <- function(sim_env) {
   # filter to only published studies
   is_published <- sim_env$new_studies[, "publication_status"] == 1
   n_published <- sum(is_published)
-  
+
   if (n_published == 0) {
     return() #finish if no published studies
   }
-  
+
   # find next available index in effects matrix
   # (first row where effect_id is NA, indicating an unfilled row)
   available_rows <- which(is.na(sim_env$effects[, "effect_id"]))
-  
+
   if (length(available_rows) < n_published) {
     stop("Insufficient rows in effects matrix at timestep ", sim_env$timestep)
   }
-  
+
   start_index <- available_rows[1]
   end_index <- start_index + n_published - 1
-  
+
   # create new rows for each published study
   new_effect_rows <- cbind(
     effect_id = sim_env$new_studies[is_published, "effect_id"],
@@ -375,7 +429,7 @@ update_effects_beliefs <- function(sim_env) {
     posterior_effect_variance = sim_env$new_posterior_vars[is_published],
     study_id = sim_env$new_studies[is_published, "study_id"]
   )
-  
+
   # fill in rows directly
   sim_env$effects[start_index:end_index, ] <- new_effect_rows
 }
