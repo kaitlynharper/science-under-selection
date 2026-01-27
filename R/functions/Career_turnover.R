@@ -24,10 +24,20 @@ career_turnover <- function(sim_env, verbose = FALSE) {
   # Filter studies to current career phase and published
   phase_start <- sim_env$timestep - sim_env$n_timesteps_per_career_step + 1
 
-  # Under truth selection, consider all studies
+  # # Under truth selection, consider all studies
+  # if (sim_env$current_selection_condition == 0) {
+  #   in_phase <- which(
+  #     !is.na(studies[, "timestep_completed"]) &
+  #       studies[, "timestep_completed"] >= phase_start &
+  #       studies[, "timestep_completed"] <= sim_env$timestep
+  #   )
+  # }
+
+  # Under truth selection, consider only published studies (testing this)
   if (sim_env$current_selection_condition == 0) {
     in_phase <- which(
-      !is.na(studies[, "timestep_completed"]) &
+      studies[, "publication_status"] == 1 &
+        !is.na(studies[, "timestep_completed"]) &
         studies[, "timestep_completed"] >= phase_start &
         studies[, "timestep_completed"] <= sim_env$timestep
     )
