@@ -6,8 +6,8 @@
 
 library(here)
 
-# Set run conditions parameter so that run_simulations script works with these parameters
-run_conditions <- 1
+# Set run conditions parameter (meaningless) so that run_simulations script works with these parameters
+run_conditions <- T
 
 # Set lists of condition parameters
 initial_selection_condition_list <- c(0, 0, 0, 0, 1, 1, 1, 1)
@@ -24,7 +24,7 @@ for (i in 1:length(initial_selection_condition_list)) {
   n_timesteps <- n_timesteps_list[i]
   hold_samples_constant_at <- sample_sizes_list[i]
   source(here("R", "run_simulation.R"))
-  source(here("R", "playing_around", "analysis_Felix.R"))
+  source(here("R", "analysis.R"))
   # Save the object "patchwork" with the filename being a string of the four parameters above and their values
   ggsave(
     here(
