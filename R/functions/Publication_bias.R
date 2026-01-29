@@ -55,7 +55,11 @@ apply_publication_bias <- function(sim_env) {
     sim_env$nonsig_logistic_midpoint = 3 # novelty midpoint for non-significant results
     sim_env$nonsig_logistic_steepness = 3 # steepness of logistic curve for non-significant results
   }
-  
+
+  if (exists("run_sweep")) {
+    sim_env$nonsig_logistic_midpoint = sim_env$set_nonsig_logistic_midpoint
+  }
+
   # determine if each study is significant
   is_significant <- sim_env$new_studies[, "p_value"] < 0.05
   

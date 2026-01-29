@@ -46,7 +46,8 @@ params <- list(
   innovation_sd = 0, # standard deviation of innovation noise added to new agents
   mutation_rate = 0, # probability that a new agent's replication_probability flips (0->1 or 1->0)
   hold_samples_constant_at = 30, # if NA, sample sizes are calculated; if a value, all studies use that sample size
-  publication_bias = 2 #0 = no publication bias, 1 = weak publication bias, 2 = strong publication bias
+  publication_bias = 2, #0 = no publication bias, 1 = weak publication bias, 2 = strong publication bias
+  set_nonsig_logistic_midpoint = NA # for setting specific pub bias function when sweeping
 )
 
 if (exists("run_conditions")) {
@@ -55,6 +56,12 @@ if (exists("run_conditions")) {
   params$switch_conditions_at <- switch_conditions_at
   params$publication_bias <- publication_bias
   params$hold_samples_constant_at <- hold_samples_constant_at
+}
+
+if (exists("run_sweep")) {
+  params$hold_samples_constant_at <- hold_samples_constant_at
+  params$set_nonsig_logistic_midpoint <- nonsig_logistic_midpoint
+  params$base_null_probability <- base_null_probability
 }
 
 # Run simulation and track memory and runtime
