@@ -4,7 +4,7 @@
 
 # Implemented:
 # assign_effects: assign effect_ids to studies based on type
-# determine_sample_sizes: calculate sample sizes using power.t.test
+# determine_sample_sizes: assign sample sizes (constant or power-based for replications)
 # determine_study_durations: calculate study completion times
 # generate_study_results: simulate observed effect sizes and p-values
 # kl_norm: KL divergence between two normal distributions
@@ -138,78 +138,48 @@ assign_effects <- function(sim_env, verbose = FALSE) {
 
 #### determine_sample_sizes ####
 determine_sample_sizes <- function(sim_env) {
-  n_studies <- nrow(sim_env$new_studies)
+  # all studies start with the base sample size
+  sim_env$new_studies[, "sample_size"] <- sim_env$hold_samples_constant_at
 
-  # if hold_samples_constant_at is set, use that value for all studies
-  if (!is.na(sim_env$hold_samples_constant_at)) {
-    sim_env$new_studies[, "sample_size"] <- rep(
-      sim_env$hold_samples_constant_at,
-      n_studies
-    )
+  # if dynamic replication sample sizes disabled or no replications, we're done
+  if (sim_env$replications_dynamic_sample_sizes == 0 ||
+    sum(sim_env$is_replication) == 0) {
     return()
   }
 
-  # calculate reference effects
-  reference_effects <- numeric(n_studies)
+  # calculate power-based sample sizes for replications only
+  # filter to published original studies (completed only)
+  pub_orig <- sim_env$studies[, "study_type"] == 0 &
+    sim_env$studies[, "publication_status"] == 1 &
+    !is.na(sim_env$studies[, "timestep_completed"]) &
+    sim_env$studies[, "timestep_completed"] <= sim_env$timestep &
+    !is.na(sim_env$studies[, "estimated_mean"])
 
-  # originals: burn-in medium or mean published
-  if (sim_env$timestep < sim_env$n_timesteps_per_career_step) {
-    reference_effects[!sim_env$is_replication] <- 0.5
-  } else {
-    published_completed <- sim_env$studies[, "publication_status"] == 1 &
-      !is.na(sim_env$studies[, "timestep_completed"]) &
-      sim_env$studies[, "timestep_completed"] <= sim_env$timestep &
-      !is.na(sim_env$studies[, "estimated_mean"])
-    published_effects <- sim_env$studies[published_completed, "estimated_mean"]
-    reference_effects[!sim_env$is_replication] <- mean(published_effects)
-  }
+  # match replication effect_ids to published originals
+  rep_effect_ids <- sim_env$new_studies[sim_env$is_replication, "effect_id"]
+  orig_indices <- match(rep_effect_ids, sim_env$studies[pub_orig, "effect_id"])
 
-  # replications: use original effect if significant, otherwise medium
-  if (sum(sim_env$is_replication) > 0) {
-    # filter to published original studies (completed only)
-    pub_orig <- sim_env$studies[, "study_type"] == 0 &
-      sim_env$studies[, "publication_status"] == 1 &
-      !is.na(sim_env$studies[, "timestep_completed"]) &
-      sim_env$studies[, "timestep_completed"] <= sim_env$timestep &
-      !is.na(sim_env$studies[, "estimated_mean"])
+  # extract means and p-values for matched originals
+  orig_means <- sim_env$studies[pub_orig, "estimated_mean"][orig_indices]
+  orig_pvals <- sim_env$studies[pub_orig, "p_value"][orig_indices]
 
-    # match replication effect_ids to published originals
-    rep_effect_ids <- sim_env$new_studies[sim_env$is_replication, "effect_id"]
-    orig_indices <- match(
-      rep_effect_ids,
-      sim_env$studies[pub_orig, "effect_id"]
+  # reference effect: original effect if significant, otherwise 0.3
+  reference_effects <- ifelse(orig_pvals < 0.05, abs(orig_means), 0.3)
+
+  # calculate sample sizes for 80% power (one-sided test for replications)
+  rep_sample_sizes <- vapply(reference_effects, function(delta) {
+    power_result <- power.t.test(
+      power = 0.8,
+      delta = abs(delta),
+      sd = 1,
+      sig.level = 0.05,
+      type = "two.sample",
+      alternative = "one.sided"
     )
+    max(ceiling(power_result$n), 1)
+  }, numeric(1))
 
-    # extract means and p-values for matched originals
-    orig_means <- sim_env$studies[pub_orig, "estimated_mean"][orig_indices]
-    orig_pvals <- sim_env$studies[pub_orig, "p_value"][orig_indices]
-
-    # use original effect if p < 0.05, otherwise 0.5
-    reference_effects[sim_env$is_replication] <- ifelse(
-      orig_pvals < 0.05,
-      abs(orig_means),
-      0.5
-    )
-  }
-
-  # calculate sample sizes with appropriate test type
-  sample_sizes <- mapply(
-    function(power, delta, alt) {
-      power_result <- power.t.test(
-        power = power,
-        delta = abs(delta),
-        sd = 1,
-        sig.level = 0.05,
-        type = "two.sample",
-        alternative = alt
-      )
-      max(ceiling(power_result$n), 1)
-    },
-    power = sim_env$new_studies[, "target_power"],
-    delta = reference_effects,
-    alt = ifelse(sim_env$is_replication, "one.sided", "two.sided")
-  )
-  sim_env$new_studies[, "sample_size"] <- sample_sizes
+  sim_env$new_studies[sim_env$is_replication, "sample_size"] <- rep_sample_sizes
 }
 
 #### determine_study_durations ####

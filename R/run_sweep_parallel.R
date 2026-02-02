@@ -83,6 +83,7 @@ base_params <- list(
   career_turnover_selection_rate = 0.5,
   innovation_sd = 0,
   mutation_rate = 0.1,
+  replications_dynamic_sample_sizes = 1,
   publication_bias = 2
 )
 
