@@ -19,6 +19,30 @@ function_files <- list.files(here("R", "functions"), full.names = TRUE)
 sapply(function_files, source, .GlobalEnv)
 source(here("R", "model.R"))
 
+#### MODE SWITCH ####
+# TRUE = replication rates evolve via selection (sweep base_null_probability)
+# FALSE = fixed replication rates, no evolution (sweep initial_replication_rate)
+evolution_enabled <- FALSE
+
+# Set third sweep parameter based on mode
+third_param <- if (evolution_enabled) {
+  list(
+    name = "base_null_probability",
+    min = 0,
+    max = 1,
+    label = "Base Null Probability",
+    color = "#009E73"
+  )
+} else {
+  list(
+    name = "initial_replication_rate",
+    min = 0,
+    max = 1,
+    label = "Initial Replication Rate",
+    color = "#D55E00"
+  )
+}
+
 #### SETTING PARAMETER DISTRIBUTIONS ####
 # define parameter ranges (used for sampling and plotting)
 param_config <- list(
@@ -30,16 +54,17 @@ param_config <- list(
   ),
   nonsig_logistic_midpoint = list(
     min = -0.5,
-    max = 5,
+    max = 3,
     label = "Publication Bias",
     color = "#56B4E9"
-  ),
-  base_null_probability = list(
-    min = 0,
-    max = 1,
-    label = "Base Null Probability",
-    color = "#009E73"
   )
+)
+# add third parameter dynamically
+param_config[[third_param$name]] <- list(
+  min = third_param$min,
+  max = third_param$max,
+  label = third_param$label,
+  color = third_param$color
 )
 
 # MAYBE CONSIDER ADDING LATER
@@ -51,7 +76,7 @@ param_config <- list(
 # Latin hypercube sampling for better parameter space coverage
 draw_params <- function(n = 1) {
   h <- randomLHS(n, length(param_config))
-  data.frame(
+  df <- data.frame(
     # log-uniform for sample size (better coverage of small values)
     hold_samples_constant_at = round(exp(qunif(
       h[, 1],
@@ -62,13 +87,15 @@ draw_params <- function(n = 1) {
       h[, 2],
       param_config$nonsig_logistic_midpoint$min,
       param_config$nonsig_logistic_midpoint$max
-    ),
-    base_null_probability = qunif(
-      h[, 3],
-      param_config$base_null_probability$min,
-      param_config$base_null_probability$max
     )
   )
+  # add third parameter dynamically
+  df[[third_param$name]] <- qunif(
+    h[, 3],
+    third_param$min,
+    third_param$max
+  )
+  df
 }
 
 #### SETUP PARALLEL BACKEND ####
@@ -89,7 +116,7 @@ progress <- function(n) setTxtProgressBar(pb, n)
 sweep_params <- draw_params(n_sims)
 sweep_params$seed <- seq_len(n_sims)
 
-# Base parameters
+# Base parameters (some depend on evolution_enabled mode)
 base_params <- list(
   n_agents = 1000,
   n_timesteps = 350,
@@ -103,12 +130,23 @@ base_params <- list(
   uninformed_prior_variance = 1,
   initial_selection_condition = 1,
   switch_conditions_at = NA,
-  career_turnover_selection_rate = 0.5,
   innovation_sd = 0,
-  mutation_rate = 0.1,
   replications_dynamic_sample_sizes = 1,
   publication_bias = 2
 )
+
+# Mode-dependent parameters
+if (evolution_enabled) {
+  # evolution mode: sweep base_null, fix initial_replication_rate
+  base_params$initial_replication_rate <- 0.5
+  base_params$career_turnover_selection_rate <- 0.5
+  base_params$mutation_rate <- 0.1
+} else {
+  # fixed mode: sweep initial_replication_rate, fix base_null
+  base_params$base_null_probability <- 0.9
+  base_params$career_turnover_selection_rate <- 0
+  base_params$mutation_rate <- 0
+}
 
 # Run simulations in parallel
 sweep_results <- foreach(
@@ -120,6 +158,7 @@ sweep_results <- foreach(
     "base_params",
     "sweep_params",
     "run_sweep",
+    "third_param",
     # main simulation function
     "run_simulation",
     # initialization functions
@@ -158,7 +197,7 @@ sweep_results <- foreach(
     params$set_nonsig_logistic_midpoint <- sweep_params$nonsig_logistic_midpoint[
       i
     ]
-    params$base_null_probability <- sweep_params$base_null_probability[i]
+    params[[third_param$name]] <- sweep_params[[third_param$name]][i]
 
     # Run simulation (verbose=0 to suppress printing in parallel)
     sim_env <- run_simulation(params, verbose = 0)
@@ -218,16 +257,17 @@ sweep_results <- foreach(
     total_scientific_progress <- sum(baseline_kl - current_kl)
 
     # Return a one-row data frame (these get rbind'd together)
-    data.frame(
+    result_df <- data.frame(
       hold_samples_constant_at = sweep_params$hold_samples_constant_at[i],
       nonsig_logistic_midpoint = sweep_params$nonsig_logistic_midpoint[i],
-      base_null_probability = sweep_params$base_null_probability[i],
       seed = sweep_params$seed[i],
       mean_replication_rate = mean_rep_rate,
       mean_original_published = mean_original_published,
       mean_replication_published = mean_replication_published,
       total_scientific_progress = total_scientific_progress
     )
+    result_df[[third_param$name]] <- sweep_params[[third_param$name]][i]
+    result_df
   }
 
 # Clean up
@@ -236,15 +276,22 @@ stopCluster(cl)
 cat("\nCompleted", n_sims, "simulations\n")
 
 #### PLOTTING ####
-# set the outcome variable to plot (uncomment one pair)
-outcome_var <- "mean_replication_rate"
-outcome_label <- "% replicator agents"
-# outcome_var <- "mean_original_published"
-# outcome_label <- "% original studies published"
-# outcome_var <- "mean_replication_published"
-# outcome_label <- "% replication studies published"
-# outcome_var <- "total_scientific_progress"
-# outcome_label <- "Total scientific progress (KL)"
+# Read data if needed
+# sweep_results <- read.csv("output/sweep_results_truth.csv")
+sweep_results <- read.csv("output/repsweep_results_noselection.csv")
+# define outcome variables and labels to loop through
+outcomes <- list(
+  list(var = "mean_replication_rate", label = "% replicator agents"),
+  list(
+    var = "total_scientific_progress",
+    label = "Total scientific progress (KL)"
+  ),
+  list(
+    var = "mean_replication_published",
+    label = "% replication studies published"
+  ),
+  list(var = "mean_original_published", label = "% original studies published")
+)
 
 # extract plotting info from param_config
 param_names <- names(param_config)
@@ -263,106 +310,136 @@ for (i in seq_along(param_names)) {
     (r[2] - r[1])
 }
 
-# Build loess predictions for each parameter for the partial dependency plot
-pdp_data <- data.frame()
-for (i in seq_along(param_names)) {
-  norm_col <- paste0(param_names[i], "_norm")
-  fit <- loess(
-    as.formula(paste(outcome_var, "~ get(norm_col)")),
-    data = sweep_norm,
-    span = 0.75
-  )
-  grid_x <- seq(0, 1, length.out = 100)
-  pdp_data <- rbind(
-    pdp_data,
-    data.frame(
-      param = param_labels[i],
-      x_norm = grid_x,
-      y = predict(fit, newdata = setNames(data.frame(grid_x), norm_col))
-    )
-  )
-}
+# loop through all outcome variables
+for (outcome in outcomes) {
+  outcome_var <- outcome$var
+  outcome_label <- outcome$label
 
-# Combined partial dependency plot
-p_pdp <- ggplot(pdp_data, aes(x = x_norm, y = y, color = param)) +
-  geom_line(linewidth = 1.2) +
-  scale_color_manual(values = setNames(param_colors, param_labels)) +
-  labs(
-    x = "Parameter Value (normalized)",
-    y = outcome_label,
-    color = NULL
-  ) +
-  theme_classic() +
-  theme(legend.position = "bottom")
-
-# Individual scatterplots
-make_scatter <- function(i) {
-  ggplot(
-    sweep_results,
-    aes(x = .data[[param_names[i]]], y = .data[[outcome_var]])
-  ) +
-    geom_point(color = param_colors[i], alpha = 0.6) +
-    geom_smooth(
-      method = "loess",
-      se = FALSE,
-      color = param_colors[i],
+  # Build loess predictions for each parameter for the partial dependency plot
+  pdp_data <- data.frame()
+  for (i in seq_along(param_names)) {
+    norm_col <- paste0(param_names[i], "_norm")
+    fit <- loess(
+      as.formula(paste(outcome_var, "~ get(norm_col)")),
+      data = sweep_norm,
       span = 0.75
+    )
+    grid_x <- seq(0, 1, length.out = 100)
+    pdp_data <- rbind(
+      pdp_data,
+      data.frame(
+        param = param_labels[i],
+        x_norm = grid_x,
+        y = predict(fit, newdata = setNames(data.frame(grid_x), norm_col))
+      )
+    )
+  }
+
+  # Combined partial dependency plot
+  p_pdp <- ggplot(pdp_data, aes(x = x_norm, y = y, color = param)) +
+    geom_line(linewidth = 1.2) +
+    scale_color_manual(values = setNames(param_colors, param_labels)) +
+    labs(
+      x = "Parameter Value (normalized)",
+      y = outcome_label,
+      color = NULL
     ) +
-    labs(x = param_labels[i], y = outcome_label) +
-    theme_classic()
-}
+    theme_classic() +
+    theme(legend.position = "bottom")
 
-# Display
-p_pdp
-make_scatter(1) + make_scatter(2) + make_scatter(3)
+  # Individual scatterplots
+  make_scatter <- function(i) {
+    ggplot(
+      sweep_results,
+      aes(x = .data[[param_names[i]]], y = .data[[outcome_var]])
+    ) +
+      geom_point(color = param_colors[i], alpha = 0.6) +
+      geom_smooth(
+        method = "loess",
+        se = FALSE,
+        color = param_colors[i],
+        span = 0.75
+      ) +
+      labs(x = param_labels[i], y = outcome_label) +
+      theme_classic()
+  }
 
-#### TWO-WAY INTERACTION HEATMAPS ####
+  # Display partial dependency plot
+  print(p_pdp)
+  # Display scatterplots
+  print(make_scatter(1) + make_scatter(2) + make_scatter(3))
 
-make_heatmap <- function(xvar, yvar, xlabel, ylabel, selection = T) {
-  ggplot(
-    sweep_results[selection, ],
-    aes(x = .data[[xvar]], y = .data[[yvar]], z = .data[[outcome_var]])
-  ) +
-    stat_summary_2d(fun = mean, bins = 15) +
-    scale_fill_viridis_c(name = outcome_label) +
-    labs(x = xlabel, y = ylabel) +
-    theme_classic()
-}
+  #### TWO-WAY INTERACTION HEATMAPS ####
+  make_heatmap <- function(xvar, yvar, xlabel, ylabel, selection = TRUE) {
+    ggplot(
+      sweep_results[selection, ],
+      aes(x = .data[[xvar]], y = .data[[yvar]], z = .data[[outcome_var]])
+    ) +
+      stat_summary_2d(fun = mean, bins = 15) +
+      scale_fill_viridis_c(name = outcome_label) +
+      labs(x = xlabel, y = ylabel) +
+      theme_classic()
+  }
 
-p_int1 <- make_heatmap(
-  "nonsig_logistic_midpoint",
-  "base_null_probability",
-  "Publication Bias",
-  "Base Null Probability",
-)
-p_int2 <- make_heatmap(
-  "nonsig_logistic_midpoint",
-  "hold_samples_constant_at",
-  "Publication Bias",
-  "Sample Size"
-)
-p_int3 <- make_heatmap(
-  "base_null_probability",
-  "hold_samples_constant_at",
-  "Base Null Probability",
-  "Sample Size"
-)
-
-p_int1
-p_int2
-p_int3
-
-# three-way interaction slices
-lower_bound <- c(0, 0.2, 0.4, 0.6, 0.8)
-for (j in lower_bound) {
-  p_slice <- make_heatmap(
+  p_int1 <- make_heatmap(
+    "nonsig_logistic_midpoint",
+    third_param$name,
+    "Publication Bias",
+    third_param$label
+  )
+  p_int2 <- make_heatmap(
     "nonsig_logistic_midpoint",
     "hold_samples_constant_at",
     "Publication Bias",
-    "Sample Size",
-    selection = sweep_results$base_null_probability > j &
-      sweep_results$base_null_probability < (j + 0.2)
+    "Sample Size"
   )
-  p_slice <- p_slice + ggtitle(paste0("Base null between ", j, " and ", j + .2))
-  print(p_slice)
+  p_int3 <- make_heatmap(
+    third_param$name,
+    "hold_samples_constant_at",
+    third_param$label,
+    "Sample Size"
+  )
+
+  print(p_int1)
+  print(p_int2)
+  print(p_int3)
+
+  # # three-way interaction slices
+  # if (evolution_enabled) {
+  #   # evolution mode: slice through base_null_probability
+  #   slice_breaks <- c(0, 0.2, 0.4, 0.6, 0.8, 1.0)
+  #   for (j in seq_along(slice_breaks[-1])) {
+  #     lower <- slice_breaks[j]
+  #     upper <- slice_breaks[j + 1]
+  #     p_slice <- make_heatmap(
+  #       "nonsig_logistic_midpoint",
+  #       "hold_samples_constant_at",
+  #       "Publication Bias",
+  #       "Sample Size",
+  #       selection = sweep_results$base_null_probability >= lower &
+  #         sweep_results$base_null_probability < upper
+  #     )
+  #     p_slice <- p_slice +
+  #       ggtitle(paste0("Base null between ", lower, " and ", upper))
+  #     print(p_slice)
+  #   }
+  # } else {
+  #   # fixed mode: slice through publication bias
+  #   slice_breaks <- c(-0.5, 0.375, 1.25, 2.125, 3)
+  #   for (j in seq_along(slice_breaks[-1])) {
+  #     lower <- slice_breaks[j]
+  #     upper <- slice_breaks[j + 1]
+  #     p_slice <- make_heatmap(
+  #       "initial_replication_rate",
+  #       "hold_samples_constant_at",
+  #       "Initial Replication Rate",
+  #       "Sample Size",
+  #       selection = sweep_results$nonsig_logistic_midpoint >= lower &
+  #         sweep_results$nonsig_logistic_midpoint < upper
+  #     )
+  #     p_slice <- p_slice +
+  #       ggtitle(paste0("Publication bias between ", lower, " and ", upper))
+  #     print(p_slice)
+  #   }
+  # }
 }
