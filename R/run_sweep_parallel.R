@@ -132,7 +132,8 @@ base_params <- list(
   switch_conditions_at = NA,
   innovation_sd = 0,
   replications_dynamic_sample_sizes = 1,
-  publication_bias = 2
+  publication_bias = 2,
+  all_replications_published = 1
 )
 
 # Mode-dependent parameters
@@ -278,7 +279,7 @@ cat("\nCompleted", n_sims, "simulations\n")
 #### PLOTTING ####
 # Read data if needed
 # sweep_results <- read.csv("output/sweep_results_truth.csv")
-sweep_results <- read.csv("output/repsweep_results_noselection.csv")
+# sweep_results <- read.csv("output/repsweep_results_noselection.csv")
 # define outcome variables and labels to loop through
 outcomes <- list(
   list(var = "mean_replication_rate", label = "% replicator agents"),
