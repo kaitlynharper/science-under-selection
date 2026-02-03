@@ -82,3 +82,32 @@ results <- run_simulation(params)
 # View(results$effects)
 # Open profvis profile
 # print(profvis_profile)
+
+##########
+# Investigaring novelty contribution by p-value significance and study type
+##########
+
+# Clean studies and add significance flag
+df <- results$studies |>
+  as.data.frame() |>
+  filter(!is.na(study_id)) |>
+  mutate(sig = p_value < 0.05)
+
+# Get original study significance by effect_id
+orig_sig <- df |>
+  filter(study_type == 0) |>
+  select(effect_id, orig_sig = sig)
+
+# Join and ensure originals stay NA for orig_sig
+df <- df |>
+  left_join(orig_sig, by = "effect_id") |>
+  mutate(orig_sig = if_else(study_type == 0, NA, orig_sig))
+
+# Full crossed summary
+df |>
+  group_by(study_type, sig, orig_sig) |>
+  summarise(
+    mean_novelty = mean(novelty_contribution, na.rm = TRUE),
+    n = n(),
+    .groups = "drop"
+  )
