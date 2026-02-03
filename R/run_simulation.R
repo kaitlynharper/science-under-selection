@@ -45,8 +45,9 @@ params <- list(
   career_turnover_selection_rate = 0.5, # proportion of agents to retire each career step
   innovation_sd = 0, # standard deviation of innovation noise added to new agents
   mutation_rate = 0.1, # probability that a new agent's replication_probability flips (0->1 or 1->0)
-  hold_samples_constant_at = 30, # base sample size for all studies (originals always use this)
-  replications_dynamic_sample_sizes = 0, # 0 = replications use hold_samples_constant_at, 1 = replications use 80% power of original effect, or 0.3 (if original non-sig)
+  initial_replication_rate = 0.5, # initial proportion of agents who are replicators (0 or 1)
+  hold_samples_constant_at = 50, # base sample size for all studies (originals always use this)
+  replications_dynamic_sample_sizes = 1, # 0 = replications use hold_samples_constant_at, 1 = replications use 80% power of original effect, or 0.3 (if original non-sig)
   publication_bias = 2, # 0 = no publication bias, 1 = weak publication bias, 2 = strong publication bias
   set_nonsig_logistic_midpoint = NA # for setting specific pub bias function when sweeping
 )
