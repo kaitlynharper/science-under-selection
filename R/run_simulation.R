@@ -49,7 +49,8 @@ params <- list(
   hold_samples_constant_at = 50, # base sample size for all studies (originals always use this)
   replications_dynamic_sample_sizes = 1, # 0 = replications use hold_samples_constant_at, 1 = replications use 80% power of original effect, or 0.3 (if original non-sig)
   publication_bias = 2, # 0 = no publication bias, 1 = weak publication bias, 2 = strong publication bias
-  set_nonsig_logistic_midpoint = NA # for setting specific pub bias function when sweeping
+  set_nonsig_logistic_midpoint = NA, # for setting specific pub bias function when sweeping
+  all_replications_published = 0 # 0 = normal publication bias, 1 = all replications published regardless of bias
 )
 
 if (exists("run_conditions")) {
@@ -58,6 +59,7 @@ if (exists("run_conditions")) {
   params$switch_conditions_at <- switch_conditions_at
   params$publication_bias <- publication_bias
   params$hold_samples_constant_at <- hold_samples_constant_at
+  params$all_replications_published <- all_replications_published
 }
 
 if (exists("run_sweep")) {

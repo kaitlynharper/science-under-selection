@@ -85,5 +85,11 @@ apply_publication_bias <- function(sim_env) {
   sim_env$new_studies[, "publication_status"] <- as.integer(
     runif(n_studies) < publication_prob
   )
+  
+  # if all_replications_published is 1, set all replications to published
+  if (sim_env$all_replications_published == 1) {
+    is_replication <- sim_env$new_studies[, "study_type"] == 1
+    sim_env$new_studies[is_replication, "publication_status"] <- 1
+  }
 }
   
