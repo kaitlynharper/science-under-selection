@@ -17,6 +17,9 @@ function_files <- list.files(here("R", "functions"), full.names = TRUE)
 sapply(function_files, source, .GlobalEnv)
 source(here("R", "model.R"))
 
+# source the modified
+# source(here("R", "playing_around", "Run_studies_helpers_Felix.R"))
+
 # Set seed for reproducibility
 # set.seed(123)
 
@@ -24,15 +27,15 @@ source(here("R", "model.R"))
 params <- list(
   # Parameters for agents and study design
   n_agents = 1000, # number of agents
-  n_timesteps = 300, # number of timesteps
+  n_timesteps = 1000, # number of timesteps
   n_timesteps_per_career_step = 35, # number of timesteps per career phase
   duration_per_observation = 0.1, # TODO calibration required # timesteps per observations
   duration_original_intercept = 1, # TODO calibration required # base timesteps for original studies
 
   # Parameters for true effects
   n_effects = 500000, # number of effects
-  base_null_probability = .9, # base probability of a null effect
-  effect_size_mean = .3, # mean effect size
+  base_null_probability = .95, # base probability of a null effect
+  effect_size_mean = .2, # mean effect size
   effect_size_variance = 0.1, # variance of effect sizes
 
   # Parameters for collective belief updating
@@ -45,15 +48,15 @@ params <- list(
   career_turnover_selection_rate = 0.5, # proportion of agents to retire each career step
   innovation_sd = 0, # standard deviation of innovation noise added to new agents
   mutation_rate = 0.1, # probability that a new agent's replication_probability flips (0->1 or 1->0)
-  initial_replication_rate = 0.5, # initial proportion of agents who are replicators (0 or 1)
+  initial_replication_rate = 0, # initial proportion of agents who are replicators (0 or 1)
   hold_samples_constant_at = 50, # base sample size for all studies (originals always use this)
   replications_dynamic_sample_sizes = 1, # 0 = replications use hold_samples_constant_at, 1 = replications use 80% power of original effect, or 0.3 (if original non-sig)
   publication_bias = 2, # 0 = no publication bias, 1 = weak publication bias, 2 = strong publication bias
   set_nonsig_logistic_midpoint = NA, # for setting specific pub bias function when sweeping
-  all_replications_published = 0, # 0 = normal publication bias, 1 = all replications published regardless of bias
+  all_replications_published = 1, # 0 = normal publication bias, 1 = all replications published regardless of bias
 
   # Additional parameters
-  burn_in_period = 100  # During burn-in, all agents run original studies only and no mutation (original-> replication or v.v.) happens
+  burn_in_period = 300
 )
 
 if (exists("run_conditions")) {
