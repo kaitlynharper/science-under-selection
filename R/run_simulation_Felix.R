@@ -26,8 +26,8 @@ source(here("R", "model.R"))
 # Define simulation parameters
 params <- list(
   # Parameters for agents and study design
-  n_agents = 1000, # number of agents
-  n_timesteps = 1000, # number of timesteps
+  n_agents = 3000, # number of agents
+  n_timesteps = 2000, # number of timesteps
   n_timesteps_per_career_step = 35, # number of timesteps per career phase
   duration_per_observation = 0.1, # TODO calibration required # timesteps per observations
   duration_original_intercept = 1, # TODO calibration required # base timesteps for original studies
@@ -52,7 +52,7 @@ params <- list(
   hold_samples_constant_at = 50, # base sample size for all studies (originals always use this)
   replications_dynamic_sample_sizes = 1, # 0 = replications use hold_samples_constant_at, 1 = replications use 80% power of original effect, or 0.3 (if original non-sig)
   publication_bias = 2, # 0 = no publication bias, 1 = weak publication bias, 2 = strong publication bias
-  set_nonsig_logistic_midpoint = NA, # for setting specific pub bias function when sweeping
+  set_nonsig_logistic_midpoint = 2, # for setting specific pub bias function when sweeping
   all_replications_published = 1, # 0 = normal publication bias, 1 = all replications published regardless of bias
 
   # Additional parameters
@@ -91,31 +91,5 @@ results <- run_simulation(params)
 # Open profvis profile
 # print(profvis_profile)
 
-##########
-# Investigaring novelty contribution by p-value significance and study type
-##########
 
-# Clean studies and add significance flag
-df <- results$studies |>
-  as.data.frame() |>
-  filter(!is.na(study_id)) |>
-  mutate(sig = p_value < 0.05)
-
-# Get original study significance by effect_id
-orig_sig <- df |>
-  filter(study_type == 0) |>
-  select(effect_id, orig_sig = sig)
-
-# Join and ensure originals stay NA for orig_sig
-df <- df |>
-  left_join(orig_sig, by = "effect_id") |>
-  mutate(orig_sig = if_else(study_type == 0, NA, orig_sig))
-
-# Full crossed summary
-df |>
-  group_by(study_type, sig, orig_sig) |>
-  summarise(
-    mean_novelty = mean(novelty_contribution, na.rm = TRUE),
-    n = n(),
-    .groups = "drop"
-  )
+saveRDS(results, file="R/sim_results/felix_medium_PB_plot.RDS")

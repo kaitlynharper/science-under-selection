@@ -1,6 +1,9 @@
 library(dplyr)
 library(ggplot2)
+library(scales)
 library(patchwork)
+
+results <- readRDS(file="R/sim_results/felix_medium_PB_plot.RDS")
 
 # make local copies of results components for faster access
 agents <- as.data.frame(results$agents) |> filter(!is.na(researcher_id))
@@ -18,7 +21,7 @@ career_steps <- seq(
 # -------------------------------------------------------
 # get agent traits
 
-res <- data.frame()
+agent_traits <- data.frame()
 for (i in career_steps) {
   # select agents that started before or at that timestep and are not "retired" yet:
   active_agents <- agents |>
@@ -32,8 +35,8 @@ for (i in career_steps) {
 
   studies_in_last_period <- studies
 
-  res <- rbind(
-    res,
+  agent_traits <- rbind(
+    agent_traits,
     data.frame(
       timestep = i,
       avg_replication_prob = mean(active_agents$replication_probability),
@@ -42,12 +45,49 @@ for (i in career_steps) {
   )
 }
 
+
+# -------------------------------------------------------
+# get summaries of published studies
+
+pub_studies <- studies |>
+  filter(publication_status == 1) |>
+  arrange(timestep_completed) |>
+  mutate(
+    truth_contribution_cumsum = cumsum(truth_contribution),
+    career_phase = (floor(timestep_completed / results$n_timesteps_per_career_step) + 1)*results$n_timesteps_per_career_step
+  )
+  
+pub_studies_binned <- pub_studies |>
+  group_by(career_phase) |>
+  summarise(
+    truth_contribution_at_timestep = sum(truth_contribution)) |>
+  ungroup() |>
+  mutate(timestep_completed = career_phase)
+
+
+ggplot(pub_studies, aes(x=timestep_completed, y=truth_contribution_cumsum)) +
+  geom_line() +
+  theme_minimal()
+
+ggplot(pub_studies_binned, aes(x=career_phase, y=truth_contribution_at_timestep)) +
+  geom_line() +
+  theme_minimal() +
+  labs(
+    y = "Truth contribution",
+    x = "time",
+    title="Truth contribution of all publications in that career phase", 
+    subtitle="0 = stagnation; positive values = truth gain; negative values = truth loss"
+  )
+
+
+
+
 # -------------------------------------------------------
 # Quality of literature: Belief accuracy over time
 
 belief <- extract_belief_accuracy2(results)
+res2 <- left_join(agent_traits, belief, by = "timestep")
 
-res2 <- left_join(res, belief, by = "timestep")
 
 res_long <- pivot_longer(
   res2,
@@ -56,26 +96,41 @@ res_long <- pivot_longer(
   values_to = "value"
 )
 
-p1 <- ggplot(res_long, aes(x = timestep, y = value, color = measure)) +
-  geom_point() +
+p1 <- ggplot(res_long |> filter(measure=="avg_replication_prob"), aes(x = timestep, y = value, color = measure)) +
   geom_line() +
-  ylim(c(0, 1)) +
-  theme(legend.position = "bottom")
+  theme_minimal()  +
+  theme(legend.position = c(0.7, 0.15))  +
+  guides(color = guide_legend(nrow = 1, byrow = TRUE, title="")) +
+  scale_y_continuous(labels = percent_format(), limits=c(0, 1)) +
+  labs(y = "", 
+       x = "time",
+       title="Evolution of replicators")
 
-p2 <- ggplot(res2, aes(x = timestep, y = mean_kl)) +
-  geom_point() +
+p2 <- ggplot(pub_studies, aes(x=timestep_completed, y=truth_contribution_cumsum)) +
   geom_line() +
-  labs(y = "Cumulative mean KL divergence between\ntrue and believed effect sizes (less is better)")
+  theme_minimal() +
+  labs(y = "Cum. truth contrib.\nof published studies", 
+    title="Knowledge gain, decrease,\nor stagnation?",
+    x = "time",)
 
-p3 <- ggplot(res2, aes(x = timestep, y = n_effects_investigated)) +
-  geom_point() +
-  geom_line() +
-  labs(y = "Cumulative number of effects published")
 
-p4 <- ggplot(res2, aes(x = timestep, y = total_kl)) +
-  geom_point() +
+res_long2 <- pivot_longer(
+  res2,
+  cols = c("n_effects_investigated", "n_studies_published"),
+  names_to = "measure",
+  values_to = "value"
+)
+p3 <- ggplot(res_long2, aes(x = timestep, y=value, color=measure)) +
   geom_line() +
-  labs(y = "Total KL divergence between true and believed effect sizes")
+  labs(
+    y = "Cumulative number of effects/studies published",
+    x = "time"
+  ) +
+  theme_minimal()  +
+  theme(legend.position = c(0.4, 0.9))  +
+  guides(color = guide_legend(nrow = 2, byrow = FALSE, title=""))
+
+
 
 # add horizontal line at selection switch time if applicable
 if (!is.na(results$switch_conditions_at)) {
@@ -97,13 +152,19 @@ if (!is.na(results$switch_conditions_at)) {
       linetype = "dashed",
       color = "grey60"
     )
-  p4 <- p4 +
-    geom_vline(
-      xintercept = results$switch_conditions_at,
-      linetype = "dashed",
-      color = "grey60"
-    )
 }
+
+
+# add burn-in annotation
+
+burn_in <- list(
+  annotate("rect", xmin = 0, xmax = 300, ymin = -Inf, ymax = Inf, alpha = 0.1, fill = "blue"),
+  annotate("text", x = 5, y = Inf, label = "Burn-in period", hjust = 1.1, vjust = 1.2, angle = 90, fontface = "italic", size=3.5)
+)
+
+p1 <- p1 + burn_in
+p2 <- p2 + burn_in
+p3 <- p3 + burn_in
 
 switch(
   as.character(results$publication_bias),
@@ -120,7 +181,8 @@ TITLE <- paste0(
     as.character(results$publication_bias),
     "0" = "no",
     "1" = "weak",
-    "2" = "strong"
+    "2" = "medium",
+    "3" = "strong"
   ),
   " PB",
   ", selection on ",
@@ -139,8 +201,15 @@ TITLE <- paste0(
 )
 
 #patchwork <- (p1 + p2) / (p3 + p4)
-patchwork <- p1 + p2 + p3
+#patchwork <- (p1 / p2) | p3
+
+patchwork <- p1 + p2
 patchwork + plot_annotation(title = TITLE)
+
+
+ggsave("R/plots/felix_medium_PB_plot_a1000.png", width = 10, height = 6)
+
+
 
 
 # Analyze studies
@@ -228,7 +297,8 @@ S2 |>
     mean_novel_contrib = mean(novelty_contribution, na.rm = TRUE),
     k_studies = n()
   ) |>
-  arrange(-mean_truth_contrib)
+  arrange(-mean_truth_contrib) |>
+  print(n = Inf)
 
 
 # # show histogram of line 7:

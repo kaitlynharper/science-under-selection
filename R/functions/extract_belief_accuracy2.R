@@ -1,4 +1,34 @@
-#### Extract belief accuracy over time ####
+#' Extract Belief Accuracy Over Time
+#'
+#' Calculates the Kullback-Leibler (KL) divergence between posterior beliefs
+#' and true effect sizes for all investigated effects at each timestep.
+#' This function tracks how beliefs evolve over time and measures the accuracy
+#' of the scientific community's collective knowledge.
+#'
+#' @param sim_env An environment containing simulation results
+#'
+#' @return A data frame with one row per timestep (0 to n_timesteps) containing:
+#'   \describe{
+#'     \item{timestep}{The timestep number}
+#'     \item{total_kl}{Sum of KL divergences across all investigated effects at that timestep}
+#'     \item{kl_per_effect}{Mean KL divergence per investigated effects at that timestep}
+#'     \item{n_effects_investigated}{Number of unique effects that have been investigated
+#'       (have at least one associated study) up to that timestep}
+#'   }
+#'
+#' @details
+#' The function:
+#' \itemize{
+#'   \item Identifies all effects that have been investigated at least once (have a study_id)
+#'   \item For each timestep, finds the most recent posterior belief for each effect
+#'   \item Calculates KL divergence from posterior to truth using \code{kl_norm()}
+#'   \item Returns NA for timesteps where no effects have been investigated yet
+#' }
+#'
+#' KL divergence measures how far posterior beliefs are from the true effect sizes,
+#' with lower values indicating more accurate beliefs.
+#'
+#' @seealso \code{\link{kl_norm}} for the KL divergence calculation
 extract_belief_accuracy2 <- function(sim_env) {
 
   # select only effects that have been at least investigated once:
@@ -21,17 +51,25 @@ extract_belief_accuracy2 <- function(sim_env) {
   out <- data.frame(
     timestep = timesteps,
     total_kl = numeric(n_t),
-    mean_kl = numeric(n_t),
-    n_effects_investigated = integer(n_t)
+    kl_per_effect = numeric(n_t),
+    n_effects_investigated = integer(n_t),
+    n_studies_published = integer(n_t)
   )
 
   for (i in seq_along(timesteps)) {
     threshold <- timesteps[i]
+    
+    # Version 1: Only look at effects that have been investigated up to each timestep
     relevant <- effects[effects[, "timestep"] <= threshold, , drop = FALSE]
+
+    # Version 2: Look at all effects; those that have not been investigated yet are reverted to the default prior of non-knowledge
+    # relevant <- effects
+    # relevant[relevant[, "timestep"] > threshold, "posterior_effect_size"] <- 0
+    # relevant[relevant[, "timestep"] > threshold, "posterior_effect_variance"] <- 1
 
     if (nrow(relevant) == 0) {
       out$total_kl[i] <- NA
-      out$mean_kl[i] <- NA
+      out$kl_per_effect[i] <- NA
       next
     }
 
@@ -47,8 +85,9 @@ extract_belief_accuracy2 <- function(sim_env) {
     )
 
     out$total_kl[i] <- sum(kl)
-    out$mean_kl[i] <- mean(kl)
+    out$kl_per_effect[i] <- mean(kl)
     out$n_effects_investigated[i] <- relevant[!is.na(relevant[, "study_id"]), "effect_id"] |> unique() |> length()
+    out$n_studies_published[i] <- relevant[!is.na(relevant[, "study_id"]), "study_id"] |> unique() |> length()
   }
   out
 }
