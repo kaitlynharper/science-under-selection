@@ -256,3 +256,49 @@ print(paste0(
   (sig_published * 100) |> round(2),
   "%"
 ))
+
+
+# -------------------------------------------------------
+# Presentation graphics (sweep style)
+# -------------------------------------------------------
+#### % Replicator Agents Over Timesteps ####
+p_replicators <- ggplot(res2, aes(x = timestep, y = avg_replication_prob)) +
+  geom_line(linewidth = 1.2, color = "black") +
+  geom_point(color = "black", alpha = 0.6) +
+  labs(x = "Timestep", y = "% Replicator Agents") +
+  ylim(c(0, 1)) +
+  theme_classic()
+
+print(p_replicators)
+
+
+#### Total Scientific Progress (KL) Over Timesteps ####
+# uses res2 which already has total_kl from extract_belief_accuracy2
+# scientific progress = reduction in KL from baseline
+# baseline KL calculated once for all investigated effects at final timestep
+
+# get baseline KL (from uninformed prior to truth) for investigated effects
+prior_mean <- results$uninformed_prior_mean
+prior_sd <- sqrt(results$uninformed_prior_variance)
+
+investigated <- effects |>
+  filter(!is.na(study_id)) |>
+  distinct(effect_id, .keep_all = TRUE)
+
+baseline_kl <- sum(kl_norm(
+  investigated$true_effect_size,
+  sqrt(investigated$true_effect_variance),
+  prior_mean,
+  prior_sd
+))
+
+# scientific progress = baseline - remaining uncertainty
+res2$scientific_progress <- baseline_kl - res2$total_kl
+
+p_progress <- ggplot(res2, aes(x = timestep, y = scientific_progress)) +
+  geom_line(linewidth = 1.2, color = "black") +
+  geom_point(color = "black", alpha = 0.6) +
+  labs(x = "Timestep", y = "Total Scientific Progress (KL)") +
+  theme_classic()
+
+print(p_progress)
