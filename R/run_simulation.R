@@ -24,7 +24,7 @@ source(here("R", "model.R"))
 params <- list(
   # Parameters for agents and study design
   n_agents = 1000, # number of agents
-  n_timesteps = 300, # number of timesteps
+  n_timesteps = 500, # number of timesteps
   n_timesteps_per_career_step = 35, # number of timesteps per career phase
   duration_per_observation = 0.1, # TODO calibration required # timesteps per observations
   duration_original_intercept = 1, # TODO calibration required # base timesteps for original studies
@@ -53,7 +53,7 @@ params <- list(
   all_replications_published = 0, # 0 = normal publication bias, 1 = all replications published regardless of bias
 
   # Additional parameters
-  burn_in_period = 100  # During burn-in, all agents run original studies only and no mutation (original-> replication or v.v.) happens
+  burn_in_period = 100 # During burn-in, all agents run original studies only and no mutation (original-> replication or v.v.) happens
 )
 
 if (exists("run_conditions")) {
