@@ -22,8 +22,9 @@ source(here("R", "model.R"))
 #### MODE SWITCH ####
 # TRUE = replication rates evolve via selection (sweep base_null_probability)
 # FALSE = fixed replication rates, no evolution (sweep initial_replication_rate)
-evolution_enabled <- FALSE
+evolution_enabled <- TRUE
 
+# for (replication_journal in 0:1) {
 # Set third sweep parameter based on mode
 third_param <- if (evolution_enabled) {
   list(
@@ -106,7 +107,7 @@ cat("Running on", n_cores, "cores\n")
 
 #### RUNNING THE SWEEP ####
 run_sweep <- TRUE # flag for apply_publication_bias to use set_nonsig_logistic_midpoint
-n_sims <- 2000 # total number of simulations (with param combinations randomly sampled)
+n_sims <- 100 # total number of simulations (with param combinations randomly sampled)
 
 # Progress bar
 pb <- txtProgressBar(max = n_sims, style = 3)
@@ -128,18 +129,18 @@ base_params <- list(
   effect_size_variance = 0.1,
   uninformed_prior_mean = 0,
   uninformed_prior_variance = 1,
-  initial_selection_condition = 1,
+  initial_selection_condition = 0,
   switch_conditions_at = NA,
   innovation_sd = 0,
   replications_dynamic_sample_sizes = 1,
   publication_bias = 2,
-  all_replications_published = 1
+  all_replications_published = replication_journal
 )
 
 # Mode-dependent parameters
 if (evolution_enabled) {
   # evolution mode: sweep base_null, fix initial_replication_rate
-  base_params$initial_replication_rate <- 0.5
+  base_params$initial_replication_rate <- 0
   base_params$career_turnover_selection_rate <- 0.5
   base_params$mutation_rate <- 0.1
 } else {
@@ -194,7 +195,9 @@ sweep_results <- foreach(
 
     # Build params for this run
     params <- base_params
-    params$hold_samples_constant_at <- sweep_params$hold_samples_constant_at[i]
+    params$hold_samples_constant_at <- sweep_params$hold_samples_constant_at[
+      i
+    ]
     params$set_nonsig_logistic_midpoint <- sweep_params$nonsig_logistic_midpoint[
       i
     ]
@@ -278,8 +281,12 @@ cat("\nCompleted", n_sims, "simulations\n")
 
 #### PLOTTING ####
 # Read data if needed
-# sweep_results <- read.csv("output/sweep_results_truth.csv")
+sweep_results <- read.csv("output/sweep_results_truth.csv")
+# sweep_results <- read.csv("output/sweep_results_truth_allrepspublished.csv")
 # sweep_results <- read.csv("output/repsweep_results_noselection.csv")
+# sweep_results <- read.csv(
+#   "output/repsweep_results_noselection_allrepspublished.csv"
+# )
 # define outcome variables and labels to loop through
 outcomes <- list(
   list(var = "mean_replication_rate", label = "% replicator agents"),
@@ -291,7 +298,10 @@ outcomes <- list(
     var = "mean_replication_published",
     label = "% replication studies published"
   ),
-  list(var = "mean_original_published", label = "% original studies published")
+  list(
+    var = "mean_original_published",
+    label = "% original studies published"
+  )
 )
 
 # extract plotting info from param_config
@@ -304,7 +314,10 @@ param_ranges <- lapply(param_config, function(x) c(x$min, x$max))
 sweep_norm <- sweep_results
 for (i in seq_along(param_names)) {
   r <- param_ranges[[i]]
-  sweep_norm[[paste0(param_names[i], "_norm")]] <- (sweep_results[[param_names[
+  sweep_norm[[paste0(
+    param_names[i],
+    "_norm"
+  )]] <- (sweep_results[[param_names[
     i
   ]]] -
     r[1]) /
@@ -405,42 +418,121 @@ for (outcome in outcomes) {
   print(p_int2)
   print(p_int3)
 
-  # # three-way interaction slices
-  # if (evolution_enabled) {
-  #   # evolution mode: slice through base_null_probability
-  #   slice_breaks <- c(0, 0.2, 0.4, 0.6, 0.8, 1.0)
-  #   for (j in seq_along(slice_breaks[-1])) {
-  #     lower <- slice_breaks[j]
-  #     upper <- slice_breaks[j + 1]
-  #     p_slice <- make_heatmap(
-  #       "nonsig_logistic_midpoint",
-  #       "hold_samples_constant_at",
-  #       "Publication Bias",
-  #       "Sample Size",
-  #       selection = sweep_results$base_null_probability >= lower &
-  #         sweep_results$base_null_probability < upper
-  #     )
-  #     p_slice <- p_slice +
-  #       ggtitle(paste0("Base null between ", lower, " and ", upper))
-  #     print(p_slice)
-  #   }
-  # } else {
-  #   # fixed mode: slice through publication bias
-  #   slice_breaks <- c(-0.5, 0.375, 1.25, 2.125, 3)
-  #   for (j in seq_along(slice_breaks[-1])) {
-  #     lower <- slice_breaks[j]
-  #     upper <- slice_breaks[j + 1]
-  #     p_slice <- make_heatmap(
-  #       "initial_replication_rate",
-  #       "hold_samples_constant_at",
-  #       "Initial Replication Rate",
-  #       "Sample Size",
-  #       selection = sweep_results$nonsig_logistic_midpoint >= lower &
-  #         sweep_results$nonsig_logistic_midpoint < upper
-  #     )
-  #     p_slice <- p_slice +
-  #       ggtitle(paste0("Publication bias between ", lower, " and ", upper))
-  #     print(p_slice)
-  #   }
+  #### THREE-WAY INTERACTION SLICES ####
+  # # evolution mode: slice through base_null_probability
+  # slice_var <- "base_null_probability"
+  # slice_label <- "Base null"
+  # slice_breaks <- c(0, 0.2, 0.4, 0.6, 0.8, 1.0)
+  # heatmap_xvar <- "nonsig_logistic_midpoint"
+  # heatmap_yvar <- "hold_samples_constant_at"
+  # heatmap_xlabel <- "Publication Bias"
+  # heatmap_ylabel <- "Sample Size"
+
+  # # # fixed mode: slice through publication bias
+  # # slice_var <- "nonsig_logistic_midpoint"
+  # # slice_label <- "Publication bias"
+  # # slice_breaks <- c(-0.5, 0.375, 1.25, 2.125, 3)
+  # # heatmap_xvar <- "initial_replication_rate"
+  # # heatmap_yvar <- "hold_samples_constant_at"
+  # # heatmap_xlabel <- "Initial Replication Rate"
+  # # heatmap_ylabel <- "Sample Size"
+
+  # for (j in seq_along(slice_breaks[-1])) {
+  #   lower <- slice_breaks[j]
+  #   upper <- slice_breaks[j + 1]
+  #   p_slice <- make_heatmap(
+  #     heatmap_xvar,
+  #     heatmap_yvar,
+  #     heatmap_xlabel,
+  #     heatmap_ylabel,
+  #     selection = sweep_results[[slice_var]] >= lower &
+  #       sweep_results[[slice_var]] < upper
+  #   )
+  #   p_slice <- p_slice +
+  #     ggtitle(paste0(slice_label, " between ", lower, " and ", upper))
+  #   print(p_slice)
   # }
+
+  #### THREE-WAY INTERACTION LINE GRAPH ####
+  # set target values and buffer for sample size and publication bias
+  sample_targets <- c(Low = 10, Medium = 70, High = 130)
+  sample_buffer <- 30
+
+  pb_targets <- c(Low = -0.5, Medium = 1, High = 2.5)
+  pb_buffer <- 0.5
+
+  sweep_binned <- sweep_results |>
+    mutate(
+      sample_size_level = case_when(
+        abs(hold_samples_constant_at - sample_targets["Low"]) <=
+          sample_buffer ~ "Low",
+        abs(hold_samples_constant_at - sample_targets["Medium"]) <=
+          sample_buffer ~ "Medium",
+        abs(hold_samples_constant_at - sample_targets["High"]) <=
+          sample_buffer ~ "High",
+        TRUE ~ NA_character_
+      ),
+      pub_bias_level = case_when(
+        abs(nonsig_logistic_midpoint - pb_targets["Low"]) <= pb_buffer ~ "Low",
+        abs(nonsig_logistic_midpoint - pb_targets["Medium"]) <=
+          pb_buffer ~ "Medium",
+        abs(nonsig_logistic_midpoint - pb_targets["High"]) <=
+          pb_buffer ~ "High",
+        TRUE ~ NA_character_
+      )
+    ) |>
+    filter(!is.na(sample_size_level), !is.na(pub_bias_level)) |>
+    mutate(
+      sample_size_level = factor(
+        sample_size_level,
+        levels = c("Low", "Medium", "High")
+      ),
+      pub_bias_level = factor(
+        pub_bias_level,
+        levels = c("Low", "Medium", "High")
+      )
+    )
+
+  # calculate means for each combination
+  threeway_data <- sweep_binned |>
+    group_by(
+      x = .data[[third_param$name]],
+      sample_size_level,
+      pub_bias_level
+    ) |>
+    summarise(y = mean(.data[[outcome_var]], na.rm = TRUE), .groups = "drop")
+
+  p_threeway <- ggplot(
+    threeway_data,
+    aes(x = x, y = y, color = sample_size_level, linetype = pub_bias_level)
+  ) +
+    geom_smooth(method = "loess", se = FALSE, linewidth = 1) +
+    scale_color_manual(
+      values = c("Low" = "#E69F00", "Medium" = "#56B4E9", "High" = "#009E73")
+    ) +
+    scale_linetype_manual(
+      values = c("Low" = "dotted", "Medium" = "dashed", "High" = "solid"),
+      guide = guide_legend(override.aes = list(color = "black"))
+    ) +
+    labs(
+      x = third_param$label,
+      y = outcome_label,
+      color = "Sample Size",
+      linetype = "Publication Bias"
+    ) +
+    theme_classic() +
+    theme(
+      legend.position = "bottom",
+      legend.text = element_text(color = "black"),
+      legend.title = element_text(color = "black"),
+      legend.box = "vertical"
+    )
+
+  print(p_threeway)
 }
+
+#   write.csv(
+#     sweep_results,
+#     paste0("0sweep_truth_repjournal", replication_journal, ".csv")
+#   )
+# } # loop through replication journal
