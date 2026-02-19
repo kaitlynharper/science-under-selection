@@ -50,7 +50,10 @@ params <- list(
   replications_dynamic_sample_sizes = 1, # 0 = replications use hold_samples_constant_at, 1 = replications use 80% power of original effect, or 0.3 (if original non-sig)
   publication_bias = 2, # 0 = no publication bias, 1 = weak publication bias, 2 = strong publication bias
   set_nonsig_logistic_midpoint = NA, # for setting specific pub bias function when sweeping
-  all_replications_published = 0 # 0 = normal publication bias, 1 = all replications published regardless of bias
+  all_replications_published = 0, # 0 = normal publication bias, 1 = all replications published regardless of bias
+
+  # Additional parameters
+  burn_in_period = 100  # During burn-in, all agents run original studies only and no mutation (original-> replication or v.v.) happens
 )
 
 if (exists("run_conditions")) {

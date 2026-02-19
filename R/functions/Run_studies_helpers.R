@@ -103,6 +103,11 @@ assign_effects <- function(sim_env, verbose = FALSE) {
     sim_env$new_studies[convert_indices, "study_type"] <- 0
   }
 
+  # In the burn-in period, all studies should be originals (=0)
+  if (sim_env$timestep <= sim_env$burn_in_period) {
+    sim_env$new_studies[, "study_type"] <- 0
+  }
+
   # stop if not enough original effects left
   if (sum(!sim_env$is_replication) > length(available_original_effects)) {
     stop("Insufficient original effects at timestep ", sim_env$timestep)
