@@ -56,22 +56,7 @@ params <- list(
   burn_in_period = 100 # During burn-in, all agents run original studies only and no mutation (original-> replication or v.v.) happens
 )
 
-if (exists("run_conditions")) {
-  params$n_timesteps <- n_timesteps
-  params$initial_selection_condition <- initial_selection_condition
-  params$switch_conditions_at <- switch_conditions_at
-  params$publication_bias <- publication_bias
-  params$hold_samples_constant_at <- hold_samples_constant_at
-  params$all_replications_published <- all_replications_published
-}
-
-if (exists("run_sweep")) {
-  params$hold_samples_constant_at <- hold_samples_constant_at
-  params$set_nonsig_logistic_midpoint <- nonsig_logistic_midpoint
-  params$base_null_probability <- base_null_probability
-}
-
-# Run simulation and track memory and runtime
+# Run simulation (edit params above for a single run; use run_sweep_parallel.R for parameter sweeps)
 # profvis_profile <- profvis({
 results <- run_simulation(params)
 # })
