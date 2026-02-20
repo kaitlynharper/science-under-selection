@@ -49,7 +49,7 @@ params <- list(
   hold_samples_constant_at = 50, # base sample size for all studies (originals always use this)
   replications_dynamic_sample_sizes = 1, # 0 = replications use hold_samples_constant_at, 1 = replications use 80% power of original effect, or 0.3 (if original non-sig)
   publication_bias = 2, # 0 = no publication bias, 1 = weak publication bias, 2 = strong publication bias
-  set_nonsig_logistic_midpoint = NA, # for setting specific pub bias function when sweeping
+  nonsig_logistic_midpoint = NA, # NA = use preset from publication_bias; number = use this value (e.g. in sweeps)
   all_replications_published = 0, # 0 = normal publication bias, 1 = all replications published regardless of bias
 
   # Additional parameters
