@@ -6,7 +6,7 @@
 
 # Simulation function
 #' @param verbose Integer controlling verbosity level (0 = silent, 1 = only timestep, 2 = all intermediate functions).
-run_simulation <- function(params, verbose=1) {
+run_simulation <- function(params, verbose = 1) {
   # Create simulation environment
   sim_env <- new.env()
 
@@ -39,7 +39,11 @@ run_simulation <- function(params, verbose=1) {
     sim_env = sim_env,
     n_agents = sim_env$n_agents,
     timestep_active = 0,
-    replication_probabilities = rbinom(sim_env$n_agents, 1, sim_env$initial_replication_rate),
+    replication_probabilities = rbinom(
+      sim_env$n_agents,
+      1,
+      sim_env$initial_replication_rate
+    ),
     target_powers = runif(sim_env$n_agents, 0.01, 0.99),
     timestep_next_papers = rep(0, sim_env$n_agents)
   )
@@ -50,10 +54,12 @@ run_simulation <- function(params, verbose=1) {
     # (R doesn't like to use an environment variable as a loop index variable)
     sim_env$timestep <- timestep
 
-    if (verbose > 0) print(paste0("Timestep ", timestep))
+    if (verbose > 0) {
+      print(paste0("Timestep ", timestep))
+    }
 
     # Run actual studies
-    run_studies(sim_env, verbose=verbose > 1)
+    run_studies(sim_env, verbose = verbose > 1)
 
     # Career turnover phase (skip first career step)
     if (
@@ -62,12 +68,30 @@ run_simulation <- function(params, verbose=1) {
     ) {
       if (!is.na(sim_env$switch_conditions_at)) {
         if (sim_env$switch_conditions_at == sim_env$timestep) {
-          sim_env$current_selection_condition <- 1 - sim_env$initial_selection_condition
+          sim_env$current_selection_condition <- 1 -
+            sim_env$initial_selection_condition
         }
       }
       career_turnover(sim_env, verbose = verbose > 1)
     }
   }
+
+  # Drop trailing empty rows from pre-allocated matrices
+  sim_env$effects <- sim_env$effects[
+    !is.na(sim_env$effects[, "effect_id"]),
+    ,
+    drop = FALSE
+  ]
+  sim_env$studies <- sim_env$studies[
+    !is.na(sim_env$studies[, "study_id"]),
+    ,
+    drop = FALSE
+  ]
+  sim_env$agents <- sim_env$agents[
+    !is.na(sim_env$agents[, "researcher_id"]),
+    ,
+    drop = FALSE
+  ]
 
   # Return the env
   return(sim_env)
