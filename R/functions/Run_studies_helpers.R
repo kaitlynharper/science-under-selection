@@ -109,9 +109,45 @@ assign_effects <- function(sim_env, verbose = FALSE) {
     sim_env$new_studies[, "study_type"] <- 0
   }
 
-  # stop if not enough original effects left
-  if (sum(!sim_env$is_replication) > length(available_original_effects)) {
-    stop("Insufficient original effects at timestep ", sim_env$timestep)
+  # if not enough original effects, append a new block (double effects) and recompute pool
+  n_original <- sum(!sim_env$is_replication)
+  if (n_original > length(unique(available_original_effects))) {
+    browser()
+    # Create new effects matrix block
+    current_n_effects <- max(sim_env$effects[, "effect_id"], na.rm = TRUE)
+    new_ids <- (current_n_effects + 1):(current_n_effects + sim_env$n_effects)
+    n_new <- length(new_ids)
+    new_rows <- cbind(
+      effect_id = new_ids,
+      timestep = 0,
+      true_effect_size = ifelse(
+        runif(n_new) < sim_env$base_null_probability,
+        0,
+        rnorm(n_new, sim_env$effect_size_mean, sim_env$effect_size_variance)
+      ),
+      true_effect_variance = 0.01,
+      prior_effect_size = NA,
+      prior_effect_variance = NA,
+      posterior_effect_size = sim_env$uninformed_prior_mean,
+      posterior_effect_variance = sim_env$uninformed_prior_variance,
+      study_id = NA
+    )
+    # plus an NA block for effect updates to be stored as papers are published
+    na_block <- matrix(
+      NA,
+      nrow = sim_env$n_agents * sim_env$n_timesteps,
+      ncol = ncol(sim_env$effects)
+    )
+    colnames(na_block) <- colnames(sim_env$effects)
+    # Append new block and NA block to effects matrix
+    sim_env$effects <- rbind(sim_env$effects, new_rows, na_block)
+    # Recompute available original effects
+    available_original_effects <- sim_env$effects[
+      !sim_env$effects[, "effect_id"] %in% published_completed_effect_ids &
+        !sim_env$effects[, "effect_id"] %in% published_in_progress_effect_ids &
+        !is.na(sim_env$effects[, "effect_id"]),
+      "effect_id"
+    ]
   }
 
   # assign effect_ids to original studies (without replacement)
@@ -148,8 +184,10 @@ determine_sample_sizes <- function(sim_env) {
   sim_env$new_studies[, "sample_size"] <- sim_env$hold_samples_constant_at
 
   # if dynamic replication sample sizes disabled or no replications, we're done
-  if (sim_env$replications_dynamic_sample_sizes == 0 ||
-    sum(sim_env$is_replication) == 0) {
+  if (
+    sim_env$replications_dynamic_sample_sizes == 0 ||
+      sum(sim_env$is_replication) == 0
+  ) {
     return()
   }
 
@@ -173,17 +211,21 @@ determine_sample_sizes <- function(sim_env) {
   reference_effects <- ifelse(orig_pvals < 0.05, abs(orig_means), 0.3)
 
   # calculate sample sizes for 80% power (one-sided test for replications)
-  rep_sample_sizes <- vapply(reference_effects, function(delta) {
-    power_result <- power.t.test(
-      power = 0.8,
-      delta = abs(delta),
-      sd = 1,
-      sig.level = 0.05,
-      type = "two.sample",
-      alternative = "one.sided"
-    )
-    max(ceiling(power_result$n), 1)
-  }, numeric(1))
+  rep_sample_sizes <- vapply(
+    reference_effects,
+    function(delta) {
+      power_result <- power.t.test(
+        power = 0.8,
+        delta = abs(delta),
+        sd = 1,
+        sig.level = 0.05,
+        type = "two.sample",
+        alternative = "one.sided"
+      )
+      max(ceiling(power_result$n), 1)
+    },
+    numeric(1)
+  )
 
   sim_env$new_studies[sim_env$is_replication, "sample_size"] <- rep_sample_sizes
 }
