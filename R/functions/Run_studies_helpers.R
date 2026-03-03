@@ -244,6 +244,7 @@ determine_study_durations <- function(sim_env) {
 
   # calculate when studies will be complete
   sim_env$new_studies[, "timestep_completed"] <- sim_env$timestep + durations
+  sim_env$new_studies[, "timesteps_duration"] <- durations
 
   # update agents matrix: when each researcher will be ready for next paper
   agent_indices <- match(

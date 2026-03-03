@@ -250,6 +250,13 @@ sweep_results <- foreach(
     current_kl <- kl_norm(true_mean, true_sd, posterior_mean, posterior_sd)
     total_scientific_progress <- sum(baseline_kl - current_kl)
 
+    total_timesteps <- sum(sim_env$studies[, "timesteps_duration"], na.rm = TRUE)
+    published_timesteps <- sum(
+      sim_env$studies[sim_env$studies[, "publication_status"] == 1, "timesteps_duration"],
+      na.rm = TRUE
+    )
+    perc_resources_published <- 100 * published_timesteps / total_timesteps
+
     result_df <- as.data.frame(lapply(sweep_param_names, function(nm) {
       sweep_params[[nm]][i]
     }))
@@ -259,6 +266,7 @@ sweep_results <- foreach(
     result_df$mean_original_published <- mean_original_published
     result_df$mean_replication_published <- mean_replication_published
     result_df$total_scientific_progress <- total_scientific_progress
+    result_df$perc_resources_published <- perc_resources_published
     result_df
   }
 

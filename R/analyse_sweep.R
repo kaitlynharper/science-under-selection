@@ -86,7 +86,11 @@ outcomes <- list(
     var = "mean_replication_published",
     label = "% replication studies published"
   ),
-  list(var = "mean_original_published", label = "% original studies published")
+  list(var = "mean_original_published", label = "% original studies published"),
+  list(
+    var = "perc_resources_published",
+    label = "% of time resources published"
+  )
 )
 
 ##############################################################################
