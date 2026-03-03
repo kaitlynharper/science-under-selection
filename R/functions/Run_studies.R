@@ -42,6 +42,7 @@ run_studies <- function(sim_env, verbose = FALSE) {
     estimated_mean = rep(NA, n_studies),
     estimated_se = rep(NA, n_studies),
     p_value = rep(NA, n_studies),
+    p_value_original = rep(NA, n_studies),
     novelty_contribution = rep(NA, n_studies),
     truth_contribution = rep(NA, n_studies),
     publication_status = rep(NA, n_studies)
@@ -98,7 +99,7 @@ run_studies <- function(sim_env, verbose = FALSE) {
   
   # Fill in study columns (excluding agent-specific columns)
   study_columns <- c("study_id", "researcher_id", "effect_id", "study_type", "timestep_completed",
-                     "sample_size", "estimated_mean", "estimated_se", "p_value",
+                     "sample_size", "estimated_mean", "estimated_se", "p_value", "p_value_original",
                      "novelty_contribution", "truth_contribution", "publication_status")
   
   sim_env$studies[start_index:end_index, study_columns] <- sim_env$new_studies[, study_columns]

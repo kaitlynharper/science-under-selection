@@ -304,6 +304,8 @@ generate_study_results <- function(sim_env) {
 
     # extract direction from matched originals
     orig_direction <- sim_env$studies[pub_orig, "estimated_mean"][orig_indices]
+    sim_env$new_studies[sim_env$is_replication, "p_value_original"] <-
+      sim_env$studies[pub_orig, "p_value"][orig_indices]
 
     # test in same direction as original
     p_obs[sim_env$is_replication] <- ifelse(
