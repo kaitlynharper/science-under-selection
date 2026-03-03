@@ -29,11 +29,25 @@ add_agents <- function(
   # Set timestep_active (all agents have same entry timestep)
   timesteps_active <- rep(timestep_active, n_agents)
   
-  # Find first empty row (where all columns are NA)
+  # Grow if needed
+  #Assess how many empty rows there are (rows where all columns are NA)
   empty_rows <- which(rowSums(!is.na(sim_env$agents)) == 0)
+  n_empty_rows <- length(empty_rows)
+  #Assess how many rows we want to add
+  n_rows_wanted <- n_agents
+  #If we want to add more than we have, add an empty block first (same formula as initialize_agents_matrix)
+  if (n_rows_wanted > n_empty_rows) {
+    block_size <- sim_env$n_agents * sim_env$n_timesteps
+    new_block <- matrix(NA, nrow = block_size, ncol = ncol(sim_env$agents))
+    colnames(new_block) <- colnames(sim_env$agents)
+    sim_env$agents <- rbind(sim_env$agents, new_block)
+    # Recompute empty rows after growing
+    empty_rows <- which(rowSums(!is.na(sim_env$agents)) == 0)
+  }
+  #Find first empty row and fill
   start_index <- empty_rows[1]
   end_index <- start_index + n_agents - 1
-  
+
   # Fill agents matrix with new agents
   sim_env$agents[start_index:end_index, ] <- cbind(
     researcher_ids,
