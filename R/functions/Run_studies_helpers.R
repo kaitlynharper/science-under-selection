@@ -14,6 +14,7 @@
 # update_effects_beliefs: update effects matrix with new posterior beliefs
 
 #### assign_effects ####
+# verbose: logical; TRUE only when run_simulation(verbose=2), enables "available effects" and "replicators switched" messages
 assign_effects <- function(sim_env, verbose = FALSE) {
   # create a local copy of the non-empty studies to speed up selection
   studies <- sim_env$studies[!is.na(sim_env$studies[, "study_id"]), ]
@@ -101,6 +102,9 @@ assign_effects <- function(sim_env, verbose = FALSE) {
     ])[1:excess_replications]]
     sim_env$is_replication[convert_indices] <- FALSE
     sim_env$new_studies[convert_indices, "study_type"] <- 0
+    if (verbose) {
+      print(paste0("Replicators switched to original studies: ", excess_replications))
+    }
   }
 
   # TODO: This is a hotfix for a test (remove?)

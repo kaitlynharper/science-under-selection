@@ -58,7 +58,7 @@ run_simulation <- function(params, verbose = 1) {
       print(paste0("Timestep ", timestep))
     }
 
-    # Run actual studies
+    # Run actual studies (verbose > 1: 0,1 → FALSE, 2 → TRUE for helper messages)
     run_studies(sim_env, verbose = verbose > 1)
 
     # Career turnover phase (skip first career step)

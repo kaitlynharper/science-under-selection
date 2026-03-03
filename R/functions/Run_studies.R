@@ -1,6 +1,7 @@
 #### Function: run_studies ####
 
-run_studies <- function(sim_env, verbose=FALSE) {
+# verbose: logical; when called from run_simulation, TRUE only when run_simulation(verbose=2)
+run_studies <- function(sim_env, verbose = FALSE) {
 
   # Identify agents who are ready to start a new study and are active
   ready_indices <- which(
