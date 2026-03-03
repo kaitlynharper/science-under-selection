@@ -11,7 +11,7 @@ true_sd <- 0.01
 uninformed_prior_mean <- 0
 uninformed_prior_sd <- 0.8
 
-sig_y_intercept <- 0.5
+sig_lower_asymptote <- 0.5
 sig_logistic_midpoint <- 0.5
 sig_logistic_steepness <- 3
 

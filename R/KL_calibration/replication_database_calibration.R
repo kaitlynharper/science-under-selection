@@ -184,8 +184,8 @@ logistic_significant <- function(
   midpoint = sig_logistic_midpoint,
   steepness = sig_logistic_steepness
 ) {
-  sig_y_intercept +
-    ((1 - sig_y_intercept) / (1 + exp(-steepness * (novelty - midpoint))))
+  sig_lower_asymptote +
+    ((1 - sig_lower_asymptote) / (1 + exp(-steepness * (novelty - midpoint))))
 }
 # Logistic function for non-significant results (0 to 1)
 logistic_nonsignificant <- function(

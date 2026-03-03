@@ -6,20 +6,20 @@
 source(here::here("R", "functions", "Publication_bias.R"))
 library(ggplot2)
 
-#' @param sig_y_intercept minimum publication probability for p < .05 results
+#' @param sig_lower_asymptote lower asymptote (minimum publication probability) for p < .05 results
 #' @param sig_logistic_midpoint novelty midpoint for significant results
 #' @param sig_logistic_steepness steepness of logistic curve for significant results
 #' @param nonsig_logistic_midpoint novelty midpoint for non-significant results
-#' @param nonsig_logistic_steepness steepness of logistic curve for non-significant 
+#' @param nonsig_logistic_steepness steepness of logistic curve for non-significant
 
-plot_PB <- function(sig_y_intercept, sig_logistic_midpoint, sig_logistic_steepness, nonsig_logistic_midpoint, nonsig_logistic_steepness, max_novelty = 5, subtitle=NA) {
+plot_PB <- function(sig_lower_asymptote, sig_logistic_midpoint, sig_logistic_steepness, nonsig_logistic_midpoint, nonsig_logistic_steepness, max_novelty = 5, subtitle=NA) {
   
   novelty_range <- seq(0, max_novelty, by = 0.01)
 
   viz_data <- data.frame(
     novelty = rep(novelty_range, 2),
     publication_prob = c(
-      logistic_significant(novelty_range, sig_y_intercept, sig_logistic_midpoint, sig_logistic_steepness),
+      logistic_significant(novelty_range, sig_lower_asymptote, sig_logistic_midpoint, sig_logistic_steepness),
       logistic_nonsignificant(novelty_range, nonsig_logistic_midpoint, nonsig_logistic_steepness)
     ),
     result_type = rep(
@@ -55,20 +55,20 @@ plot_PB <- function(sig_y_intercept, sig_logistic_midpoint, sig_logistic_steepne
 
 # # Medium PB:
 # plot_PB(
-#   sig_y_intercept = .5, sig_logistic_midpoint = 0.5, 
-#   sig_logistic_steepness = 3, nonsig_logistic_midpoint = 1.5, 
+#   sig_lower_asymptote = .5, sig_logistic_midpoint = 0.5,
+#   sig_logistic_steepness = 3, nonsig_logistic_midpoint = 1.5,
 #   nonsig_logistic_steepness = 3, subtitle="Medium PB")
 
 # # Strong PB:
 # plot_PB(
-#   sig_y_intercept = 0.8, sig_logistic_midpoint = 0.2,
+#   sig_lower_asymptote = 0.8, sig_logistic_midpoint = 0.2,
 #   sig_logistic_steepness = 3, nonsig_logistic_midpoint = 3,
 #   nonsig_logistic_steepness = 3, subtitle="Strong PB")
 
 # # Playing around:
 # for(publication_bias_param in seq(-0.5, 5, 0.5)){
 # plot <- plot_PB(
-#   sig_y_intercept = 0.8, sig_logistic_midpoint = 0.2,
+#   sig_lower_asymptote = 0.8, sig_logistic_midpoint = 0.2,
 #   sig_logistic_steepness = 3, nonsig_logistic_midpoint = publication_bias_param,
 #   nonsig_logistic_steepness = 3, subtitle=paste0("Publication bias parameter = ", publication_bias_param))
 # print(plot)

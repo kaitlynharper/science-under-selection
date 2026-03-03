@@ -25,7 +25,7 @@ params <- list(
   duration_per_observation = 0.1, # TODO calibration required # timesteps per observations
   duration_original_intercept = 1, # TODO calibration required # base timesteps for original studies
   # Publication bias parameters # TODO calibration required
-  sig_y_intercept = 0.2, # minimum publication probability for p < .05 results
+  sig_lower_asymptote = 0.2, # minimum publication probability for p < .05 results
   sig_logistic_midpoint = .5, # novelty midpoint for significant results
   sig_logistic_steepness = 3, # steepness of logistic curve for significant results
   nonsig_logistic_midpoint = .5, # novelty midpoint for non-significant results

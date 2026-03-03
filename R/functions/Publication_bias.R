@@ -4,15 +4,15 @@
 
 #### logistic_significant ####
 # Publication probability for significant results (p < .05)
-# Uses y-intercept to set minimum probability and logistic curve for novelty bonus
+# Uses lower asymptote to set minimum probability and logistic curve for novelty bonus
 logistic_significant <- function(
   novelty,
-  sig_y_intercept,
+  sig_lower_asymptote,
   sig_logistic_midpoint,
   sig_logistic_steepness
 ) {
-  sig_y_intercept + 
-    ((1 - sig_y_intercept) / (1 + exp(-sig_logistic_steepness * (novelty - sig_logistic_midpoint))))
+  sig_lower_asymptote + 
+    ((1 - sig_lower_asymptote) / (1 + exp(-sig_logistic_steepness * (novelty - sig_logistic_midpoint))))
 }
 
 #### logistic_nonsignificant ####
@@ -44,7 +44,7 @@ apply_publication_bias <- function(sim_env) {
   nonsig_midpoint_override <- sim_env$nonsig_logistic_midpoint
 
   if(sim_env$publication_bias == 1){ # Weak publication bias
-    sim_env$sig_y_intercept = 0.5 # minimum publication probability for p < .05 results
+    sim_env$sig_lower_asymptote = 0.5 # minimum publication probability for p < .05 results
     sim_env$sig_logistic_midpoint = 0.5 # novelty midpoint for significant results
     sim_env$sig_logistic_steepness = 3 # steepness of logistic curve for significant results
     sim_env$nonsig_logistic_midpoint = 1.5 # novelty midpoint for non-significant results
@@ -52,7 +52,7 @@ apply_publication_bias <- function(sim_env) {
   }
   
   if(sim_env$publication_bias == 2){ # Strong publication bias
-    sim_env$sig_y_intercept = 0.8 # minimum publication probability for p < .05 results
+    sim_env$sig_lower_asymptote = 0.8 # minimum publication probability for p < .05 results
     sim_env$sig_logistic_midpoint = 0.2 # novelty midpoint for significant results
     sim_env$sig_logistic_steepness = 3 # steepness of logistic curve for significant results
     sim_env$nonsig_logistic_midpoint = 3 # novelty midpoint for non-significant results
@@ -70,7 +70,7 @@ apply_publication_bias <- function(sim_env) {
   # significant results: use logistic_significant
   publication_prob[is_significant] <- logistic_significant(
     novelty = sim_env$new_studies[is_significant, "novelty_contribution"],
-    sig_y_intercept = sim_env$sig_y_intercept,
+    sig_lower_asymptote = sim_env$sig_lower_asymptote,
     sig_logistic_midpoint = sim_env$sig_logistic_midpoint,
     sig_logistic_steepness = sim_env$sig_logistic_steepness
   )
