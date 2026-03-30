@@ -398,26 +398,41 @@ calculate_novelty_contribution <- function(sim_env) {
 }
 
 #### calculate_truth_contribution ####
+# TEMP: testing savage-dickey method. When truth_contribution_method == "savage_dickey",
+# uses log posterior density at true effect - log prior density at true effect (point).
 calculate_truth_contribution <- function(sim_env) {
-  # verisimilitude change = KL(true || prior) - KL(true || posterior)
-  # positive when study moved beliefs closer to truth
-
-  kl_prior_to_true <- kl_norm(
-    sim_env$true_means,
-    sqrt(sim_env$true_vars),
-    sim_env$prior_means,
-    sqrt(sim_env$prior_vars)
-  )
-
-  kl_posterior_to_true <- kl_norm(
-    sim_env$true_means,
-    sqrt(sim_env$true_vars),
-    sim_env$new_posterior_means,
-    sqrt(sim_env$new_posterior_vars)
-  )
-
-  truth <- kl_prior_to_true - kl_posterior_to_true
-
+  if (sim_env$truth_contribution_method == "savage_dickey") {
+    # log Bayes factor (point at true effect): log p(theta_true|data) - log p(theta_true)
+    log_prior_at_true <- stats::dnorm(
+      sim_env$true_means,
+      sim_env$prior_means,
+      sqrt(sim_env$prior_vars),
+      log = TRUE
+    )
+    log_posterior_at_true <- stats::dnorm(
+      sim_env$true_means,
+      sim_env$new_posterior_means,
+      sqrt(sim_env$new_posterior_vars),
+      log = TRUE
+    )
+    truth <- log_posterior_at_true - log_prior_at_true
+  } else {
+    # verisimilitude change = KL(true || prior) - KL(true || posterior)
+    # positive when study moved beliefs closer to truth
+    kl_prior_to_true <- kl_norm(
+      sim_env$true_means,
+      sqrt(sim_env$true_vars),
+      sim_env$prior_means,
+      sqrt(sim_env$prior_vars)
+    )
+    kl_posterior_to_true <- kl_norm(
+      sim_env$true_means,
+      sqrt(sim_env$true_vars),
+      sim_env$new_posterior_means,
+      sqrt(sim_env$new_posterior_vars)
+    )
+    truth <- kl_prior_to_true - kl_posterior_to_true
+  }
   sim_env$new_studies[, "truth_contribution"] <- truth
 }
 

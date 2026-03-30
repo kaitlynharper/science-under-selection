@@ -61,7 +61,9 @@ base_params <- list(
   publication_bias = 2, # 0 = no publication bias, 1 = weak publication bias, 2 = strong publication bias
   nonsig_logistic_midpoint = NA, # NA = use preset from publication_bias; number = use this value (e.g. in sweeps)
   all_replications_published = 0, # 0 = normal publication bias, 1 = all replications published regardless of bias
-  burn_in_period = 100 # During burn-in, all agents run original studies only and no mutation
+  burn_in_period = 100, # During burn-in, all agents run original studies only and no mutation
+  # TEMP: testing savage-dickey method
+  truth_contribution_method = "kl" # "kl" or "savage_dickey" (study-level and effect-level total_scientific_progress)
 )
 
 ##############################################################################
@@ -246,9 +248,30 @@ sweep_results <- foreach(
     posterior_sd <- sqrt(studied_effects[, "posterior_effect_variance"])
     prior_mean <- sim_env$uninformed_prior_mean
     prior_sd <- sqrt(sim_env$uninformed_prior_variance)
-    baseline_kl <- kl_norm(true_mean, true_sd, prior_mean, prior_sd)
-    current_kl <- kl_norm(true_mean, true_sd, posterior_mean, posterior_sd)
-    total_scientific_progress <- sum(baseline_kl - current_kl)
+    # TEMP: testing savage-dickey method. Effect-level total progress: KL vs Savage-Dickey.
+    if (params$truth_contribution_method == "savage_dickey") {
+      log_prior_at_true <- stats::dnorm(
+        true_mean,
+        prior_mean,
+        prior_sd,
+        log = TRUE
+      )
+      log_posterior_at_true <- stats::dnorm(
+        true_mean,
+        posterior_mean,
+        posterior_sd,
+        log = TRUE
+      )
+      # na.rm = TRUE avoids NA from edge cases (e.g. zero posterior variance)
+      total_scientific_progress <- sum(
+        log_posterior_at_true - log_prior_at_true
+        #na.rm = TRUE #no more errors after adding this?
+      )
+    } else {
+      baseline_kl <- kl_norm(true_mean, true_sd, prior_mean, prior_sd)
+      current_kl <- kl_norm(true_mean, true_sd, posterior_mean, posterior_sd)
+      total_scientific_progress <- sum(baseline_kl - current_kl)
+    }
 
     total_timesteps <- sum(sim_env$studies[, "timesteps_duration"], na.rm = TRUE)
     published_timesteps <- sum(

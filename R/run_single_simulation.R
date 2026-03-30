@@ -53,7 +53,9 @@ params <- list(
   all_replications_published = 0, # 0 = normal publication bias, 1 = all replications published regardless of bias
 
   # Additional parameters
-  burn_in_period = 100 # During burn-in, all agents run original studies only and no mutation (original-> replication or v.v.) happens
+  burn_in_period = 100, # During burn-in, all agents run original studies only and no mutation (original-> replication or v.v.) happens
+  # TEMP: testing savage-dickey method
+  truth_contribution_method = "savage_dickey" # "kl" or "savage_dickey" (study-level and, in sweep, effect-level total progress)
 )
 
 # Run simulation (edit params above for a single run; use run_sweep_parallel.R for parameter sweeps)
