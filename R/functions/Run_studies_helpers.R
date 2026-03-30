@@ -116,7 +116,6 @@ assign_effects <- function(sim_env, verbose = FALSE) {
   # if not enough original effects, append a new block (double effects) and recompute pool
   n_original <- sum(!sim_env$is_replication)
   if (n_original > length(unique(available_original_effects))) {
-    browser()
     # Create new effects matrix block
     current_n_effects <- max(sim_env$effects[, "effect_id"], na.rm = TRUE)
     new_ids <- (current_n_effects + 1):(current_n_effects + sim_env$n_effects)
