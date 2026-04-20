@@ -21,14 +21,14 @@ source(here("R", "model.R"))
 ##############################################################################
 
 # Run settings
-n_sims <- 50 # total number of simulations (param combinations from LHS)
-n_cores <- parallel::detectCores() - 1
+n_sims <- 2000 # total number of simulations (param combinations from LHS)
+n_cores <- parallel::detectCores() - 2
 
 # Which parameters to sweep (names must be in sweepable_params below)
 sweep_param_names <- c(
   "hold_samples_constant_at",
   "nonsig_logistic_midpoint",
-  "uninformed_prior_variance"
+  "base_null_probability"
 )
 ##############################################################################
 #### BASE PARAMETERS ####
@@ -42,7 +42,7 @@ base_params <- list(
   duration_original_intercept = 1, # base timesteps for original studies
   # True effects
   n_effects = 500000, # number of effects
-  base_null_probability = 0.9, # base probability of a null effect (swept or fixed)
+  base_null_probability = 0.9, # base probability of a null effect
   effect_size_mean = 0.3, # mean effect size
   effect_size_variance = 0.1, # variance of effect sizes
   # Collective belief updating
@@ -233,6 +233,60 @@ sweep_results <- foreach(
       ],
       na.rm = TRUE
     )
+
+    # For replication-success metrics, use published originals as the reference
+    published_originals <- sim_env$studies[
+      sim_env$studies[, "study_type"] == 0 &
+        sim_env$studies[, "publication_status"] == 1 &
+        !is.na(sim_env$studies[, "estimated_mean"]) &
+        !is.na(sim_env$studies[, "effect_id"]),
+      ,
+      drop = FALSE
+    ]
+    # Grab all replications
+    replications <- sim_env$studies[
+      sim_env$studies[, "study_type"] == 1 &
+        !is.na(sim_env$studies[, "p_value"]) &
+        !is.na(sim_env$studies[, "p_value_original"]) &
+        !is.na(sim_env$studies[, "estimated_mean"]) &
+        !is.na(sim_env$studies[, "effect_id"]),
+      ,
+      drop = FALSE
+    ]
+
+    # Match each replication to its original via effect_id
+    original_means <- published_originals[, "estimated_mean"][
+      match(replications[, "effect_id"], published_originals[, "effect_id"])
+    ]
+    has_original <- !is.na(original_means)
+
+    # Replication "success" = same significance + same effect direction
+    p_match <- (replications[has_original, "p_value"] < 0.05) ==
+      (replications[has_original, "p_value_original"] < 0.05)
+    direction_match <- sign(replications[has_original, "estimated_mean"]) ==
+      sign(original_means[has_original])
+    replication_success <- p_match & direction_match
+
+    # Percent of all replications that match their original
+    rep_success_prepub <- if (length(replication_success) == 0) {
+      NA_real_
+    } else {
+      100 * mean(replication_success)
+    }
+
+    # Percent of published replications that match their original
+    published_replications <- replications[
+      has_original,
+      "publication_status"
+    ] ==
+      1
+    rep_success_postpub <- if (sum(published_replications, na.rm = TRUE) == 0) {
+      NA_real_
+    } else {
+      100 * mean(replication_success[published_replications], na.rm = TRUE)
+    }
+
+    # Calculating scientific progress
     has_effect_id <- !is.na(sim_env$effects[, "effect_id"])
     is_latest_update <- !duplicated(
       sim_env$effects[, "effect_id"],
@@ -262,10 +316,8 @@ sweep_results <- foreach(
         posterior_sd,
         log = TRUE
       )
-      # na.rm = TRUE avoids NA from edge cases (e.g. zero posterior variance)
       total_scientific_progress <- sum(
         log_posterior_at_true - log_prior_at_true
-        #na.rm = TRUE #no more errors after adding this?
       )
     } else {
       baseline_kl <- kl_norm(true_mean, true_sd, prior_mean, prior_sd)
@@ -273,13 +325,21 @@ sweep_results <- foreach(
       total_scientific_progress <- sum(baseline_kl - current_kl)
     }
 
-    total_timesteps <- sum(sim_env$studies[, "timesteps_duration"], na.rm = TRUE)
+    # Calculating total resources (timesteps) that count towards published knowledge
+    total_timesteps <- sum(
+      sim_env$studies[, "timesteps_duration"],
+      na.rm = TRUE
+    )
     published_timesteps <- sum(
-      sim_env$studies[sim_env$studies[, "publication_status"] == 1, "timesteps_duration"],
+      sim_env$studies[
+        sim_env$studies[, "publication_status"] == 1,
+        "timesteps_duration"
+      ],
       na.rm = TRUE
     )
     perc_resources_published <- 100 * published_timesteps / total_timesteps
 
+    # Store all in results df
     result_df <- as.data.frame(lapply(sweep_param_names, function(nm) {
       sweep_params[[nm]][i]
     }))
@@ -288,6 +348,8 @@ sweep_results <- foreach(
     result_df$mean_replication_rate <- mean_rep_rate
     result_df$mean_original_published <- mean_original_published
     result_df$mean_replication_published <- mean_replication_published
+    result_df$rep_success_prepub <- rep_success_prepub
+    result_df$rep_success_postpub <- rep_success_postpub
     result_df$total_scientific_progress <- total_scientific_progress
     result_df$perc_resources_published <- perc_resources_published
     result_df

@@ -45,7 +45,7 @@ param_config <- sweep_output$meta$param_config
 # each param's sweep range into 3 equal chunks.
 threeway_x_param <- "nonsig_logistic_midpoint"
 threeway_line1_param <- "hold_samples_constant_at"
-threeway_line2_param <- "uninformed_prior_variance"
+threeway_line2_param <- "base_null_probability"
 
 # check if any of these are non-swept parameters and give a warning
 if (
@@ -90,6 +90,14 @@ outcomes <- list(
   list(
     var = "perc_resources_published",
     label = "% of time resources published"
+  ),
+  list(
+    var = "rep_success_prepub",
+    label = "% of successful (all) replications"
+  ),
+  list(
+    var = "rep_success_postpub",
+    label = "% of successful (published) replications"
   )
 )
 
