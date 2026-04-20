@@ -46,7 +46,7 @@ po/*~
 rsconnect/
 
 # Output from simulations
-output/
+output/my_output/
 
 # MacOS system files
 .DS_store
