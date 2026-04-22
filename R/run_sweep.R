@@ -172,30 +172,7 @@ sweep_results <- foreach(
   i = seq_len(n_sims),
   .combine = rbind,
   .packages = c("dplyr", "testthat"),
-  .export = c(
-    "base_params",
-    "sweep_params",
-    "sweep_param_names",
-    "run_simulation",
-    "initialize_effects_matrix",
-    "initialize_agents_matrix",
-    "initialize_studies_matrix",
-    "add_agents",
-    "career_turnover",
-    "run_studies",
-    "assign_effects",
-    "determine_sample_sizes",
-    "determine_study_durations",
-    "generate_study_results",
-    "kl_norm",
-    "prepare_bayesian_data",
-    "calculate_novelty_contribution",
-    "calculate_truth_contribution",
-    "update_effects_beliefs",
-    "apply_publication_bias",
-    "logistic_significant",
-    "logistic_nonsignificant"
-  ),
+  .errorhandling = "remove",
   .options.snow = list(progress = progress)
 ) %dopar%
   {
