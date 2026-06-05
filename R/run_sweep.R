@@ -21,8 +21,9 @@ source(here("R", "model.R"))
 ##############################################################################
 
 # Run settings
-n_sims <- 2000 # total number of simulations (param combinations from LHS)
-n_cores <- parallel::detectCores() - 2
+n_sims <- 10 # total number of simulations (param combinations from LHS)
+n_cores <- parallel::detectCores() - 1
+max_sweep_topups <- 3 # 1 = single pass; 2+ = re-run missing seeds from prior passes
 
 # Which parameters to sweep (names must be in sweepable_params below)
 sweep_param_names <- c(
@@ -44,7 +45,7 @@ base_params <- list(
   n_effects = 500000, # number of effects
   base_null_probability = 0.9, # base probability of a null effect
   effect_size_mean = 0.3, # mean effect size
-  effect_size_variance = 0.1, # variance of effect sizes
+  effect_size_variance = 0.1, # standard deviation of the distribution of effect sizes
   # Collective belief updating
   uninformed_prior_mean = 0, # mean of uninformed prior
   uninformed_prior_variance = 1, # variance of uninformed prior
@@ -159,180 +160,209 @@ draw_params <- function(n = 1) {
 cl <- makeCluster(n_cores)
 registerDoSNOW(cl)
 
-# Initialize progress bar
-pb <- txtProgressBar(max = n_sims, style = 3)
-progress <- function(n) setTxtProgressBar(pb, n)
-
 # Draw parameters for each simulation
 sweep_params <- draw_params(n_sims)
 sweep_params$seed <- seq_len(n_sims)
+sweep_params_full <- sweep_params
 
-# Run simulations in parallel
-sweep_results <- foreach(
-  i = seq_len(n_sims),
-  .combine = rbind,
-  .packages = c("dplyr", "testthat"),
-  .errorhandling = "remove",
-  .options.snow = list(progress = progress)
-) %dopar%
-  {
-    set.seed(sweep_params$seed[i])
+# Initialise sweep_results
+sweep_results <- NULL
 
-    params <- base_params
-    for (j in seq_along(sweep_param_names)) {
-      nm <- sweep_param_names[j]
-      params[[nm]] <- sweep_params[[nm]][i]
+# Check for any missing simulation seeds to rerun
+for (sweep_topup in seq_len(max_sweep_topups)) {
+  if (sweep_topup > 1L) {
+    missing_seeds <- setdiff(seq_len(n_sims), sweep_results$seed)
+    if (length(missing_seeds) == 0L) {
+      break # skip if no seeds are missing
     }
-
-    sim_env <- run_simulation(params, verbose = 0)
-
-    window_start <- sim_env$n_timesteps - 50
-    active_in_window <- which(
-      !is.na(sim_env$agents[, "researcher_id"]) &
-        (is.na(sim_env$agents[, "timestep_inactive"]) |
-          sim_env$agents[, "timestep_inactive"] > window_start)
-    )
-    mean_rep_rate <- mean(sim_env$agents[
-      active_in_window,
-      "replication_probability"
-    ])
-    mean_original_published <- mean(
-      sim_env$studies[
-        sim_env$studies[, "study_type"] == 0,
-        "publication_status"
-      ],
-      na.rm = TRUE
-    )
-    mean_replication_published <- mean(
-      sim_env$studies[
-        sim_env$studies[, "study_type"] == 1,
-        "publication_status"
-      ],
-      na.rm = TRUE
-    )
-
-    # For replication-success metrics, use published originals as the reference
-    published_originals <- sim_env$studies[
-      sim_env$studies[, "study_type"] == 0 &
-        sim_env$studies[, "publication_status"] == 1 &
-        !is.na(sim_env$studies[, "estimated_mean"]) &
-        !is.na(sim_env$studies[, "effect_id"]),
+    sweep_params <- sweep_params_full[
+      sweep_params_full$seed %in% missing_seeds,
       ,
       drop = FALSE
     ]
-    # Grab all replications
-    replications <- sim_env$studies[
-      sim_env$studies[, "study_type"] == 1 &
-        !is.na(sim_env$studies[, "p_value"]) &
-        !is.na(sim_env$studies[, "p_value_original"]) &
-        !is.na(sim_env$studies[, "estimated_mean"]) &
-        !is.na(sim_env$studies[, "effect_id"]),
-      ,
-      drop = FALSE
-    ]
-
-    # Match each replication to its original via effect_id
-    original_means <- published_originals[, "estimated_mean"][
-      match(replications[, "effect_id"], published_originals[, "effect_id"])
-    ]
-    has_original <- !is.na(original_means)
-
-    # Replication "success" = same significance + same effect direction
-    p_match <- (replications[has_original, "p_value"] < 0.05) ==
-      (replications[has_original, "p_value_original"] < 0.05)
-    direction_match <- sign(replications[has_original, "estimated_mean"]) ==
-      sign(original_means[has_original])
-    replication_success <- p_match & direction_match
-
-    # Percent of all replications that match their original
-    rep_success_prepub <- if (length(replication_success) == 0) {
-      NA_real_
-    } else {
-      100 * mean(replication_success)
-    }
-
-    # Percent of published replications that match their original
-    published_replications <- replications[
-      has_original,
-      "publication_status"
-    ] ==
-      1
-    rep_success_postpub <- if (sum(published_replications, na.rm = TRUE) == 0) {
-      NA_real_
-    } else {
-      100 * mean(replication_success[published_replications], na.rm = TRUE)
-    }
-
-    # Calculating scientific progress
-    has_effect_id <- !is.na(sim_env$effects[, "effect_id"])
-    is_latest_update <- !duplicated(
-      sim_env$effects[, "effect_id"],
-      fromLast = TRUE
-    )
-    has_been_studied <- !is.na(sim_env$effects[, "study_id"])
-    studied_effects <- sim_env$effects[
-      has_effect_id & is_latest_update & has_been_studied,
-    ]
-    true_mean <- studied_effects[, "true_effect_size"]
-    true_sd <- sqrt(studied_effects[, "true_effect_variance"])
-    posterior_mean <- studied_effects[, "posterior_effect_size"]
-    posterior_sd <- sqrt(studied_effects[, "posterior_effect_variance"])
-    prior_mean <- sim_env$uninformed_prior_mean
-    prior_sd <- sqrt(sim_env$uninformed_prior_variance)
-    # TEMP: testing savage-dickey method. Effect-level total progress: KL vs Savage-Dickey.
-    if (params$truth_contribution_method == "savage_dickey") {
-      log_prior_at_true <- stats::dnorm(
-        true_mean,
-        prior_mean,
-        prior_sd,
-        log = TRUE
-      )
-      log_posterior_at_true <- stats::dnorm(
-        true_mean,
-        posterior_mean,
-        posterior_sd,
-        log = TRUE
-      )
-      total_scientific_progress <- sum(
-        log_posterior_at_true - log_prior_at_true
-      )
-    } else {
-      baseline_kl <- kl_norm(true_mean, true_sd, prior_mean, prior_sd)
-      current_kl <- kl_norm(true_mean, true_sd, posterior_mean, posterior_sd)
-      total_scientific_progress <- sum(baseline_kl - current_kl)
-    }
-
-    # Calculating total resources (timesteps) that count towards published knowledge
-    total_timesteps <- sum(
-      sim_env$studies[, "timesteps_duration"],
-      na.rm = TRUE
-    )
-    published_timesteps <- sum(
-      sim_env$studies[
-        sim_env$studies[, "publication_status"] == 1,
-        "timesteps_duration"
-      ],
-      na.rm = TRUE
-    )
-    perc_resources_published <- 100 * published_timesteps / total_timesteps
-
-    # Store all in results df
-    result_df <- as.data.frame(lapply(sweep_param_names, function(nm) {
-      sweep_params[[nm]][i]
-    }))
-    names(result_df) <- sweep_param_names
-    result_df$seed <- sweep_params$seed[i]
-    result_df$mean_replication_rate <- mean_rep_rate
-    result_df$mean_original_published <- mean_original_published
-    result_df$mean_replication_published <- mean_replication_published
-    result_df$rep_success_prepub <- rep_success_prepub
-    result_df$rep_success_postpub <- rep_success_postpub
-    result_df$total_scientific_progress <- total_scientific_progress
-    result_df$perc_resources_published <- perc_resources_published
-    result_df
+    # Message about how many seeds are missing
+    message(paste0(
+      "Rerunning ",
+      length(missing_seeds),
+      " missing simulation seed/s."
+    ))
+  } else {
+    sweep_params <- sweep_params_full
   }
 
-close(pb)
+  pb <- txtProgressBar(max = nrow(sweep_params), style = 3)
+  progress <- function(n) setTxtProgressBar(pb, n)
+
+  results <- foreach(
+    i = seq_len(nrow(sweep_params)),
+    .combine = rbind,
+    .packages = c("dplyr", "testthat"),
+    .errorhandling = "remove",
+    .options.snow = list(progress = progress)
+  ) %dopar%
+    {
+      set.seed(sweep_params$seed[i])
+
+      params <- base_params
+      for (j in seq_along(sweep_param_names)) {
+        nm <- sweep_param_names[j]
+        params[[nm]] <- sweep_params[[nm]][i]
+      }
+
+      sim_env <- run_simulation(params, verbose = 0)
+
+      window_start <- sim_env$n_timesteps - 50
+      active_in_window <- which(
+        !is.na(sim_env$agents[, "researcher_id"]) &
+          (is.na(sim_env$agents[, "timestep_inactive"]) |
+            sim_env$agents[, "timestep_inactive"] > window_start)
+      )
+      mean_rep_rate <- mean(sim_env$agents[
+        active_in_window,
+        "replication_probability"
+      ])
+      mean_original_published <- mean(
+        sim_env$studies[
+          sim_env$studies[, "study_type"] == 0,
+          "publication_status"
+        ],
+        na.rm = TRUE
+      )
+      mean_replication_published <- mean(
+        sim_env$studies[
+          sim_env$studies[, "study_type"] == 1,
+          "publication_status"
+        ],
+        na.rm = TRUE
+      )
+
+      # For replication-success metrics, use published originals as the reference
+      published_originals <- sim_env$studies[
+        sim_env$studies[, "study_type"] == 0 &
+          sim_env$studies[, "publication_status"] == 1 &
+          !is.na(sim_env$studies[, "estimated_mean"]) &
+          !is.na(sim_env$studies[, "effect_id"]),
+        ,
+        drop = FALSE
+      ]
+      # Grab all replications
+      replications <- sim_env$studies[
+        sim_env$studies[, "study_type"] == 1 &
+          !is.na(sim_env$studies[, "p_value"]) &
+          !is.na(sim_env$studies[, "p_value_original"]) &
+          !is.na(sim_env$studies[, "estimated_mean"]) &
+          !is.na(sim_env$studies[, "effect_id"]),
+        ,
+        drop = FALSE
+      ]
+
+      # Match each replication to its original via effect_id
+      original_means <- published_originals[, "estimated_mean"][
+        match(replications[, "effect_id"], published_originals[, "effect_id"])
+      ]
+      has_original <- !is.na(original_means)
+
+      # Replication "success" = same significance + same effect direction
+      p_match <- (replications[has_original, "p_value"] < 0.05) ==
+        (replications[has_original, "p_value_original"] < 0.05)
+      direction_match <- sign(replications[has_original, "estimated_mean"]) ==
+        sign(original_means[has_original])
+      replication_success <- p_match & direction_match
+
+      # Percent of all replications that match their original
+      rep_success_prepub <- if (length(replication_success) == 0) {
+        NA_real_
+      } else {
+        100 * mean(replication_success)
+      }
+
+      # Percent of published replications that match their original
+      published_replications <- replications[
+        has_original,
+        "publication_status"
+      ] ==
+        1
+      rep_success_postpub <- if (
+        sum(published_replications, na.rm = TRUE) == 0
+      ) {
+        NA_real_
+      } else {
+        100 * mean(replication_success[published_replications], na.rm = TRUE)
+      }
+
+      # Calculating scientific progress
+      has_effect_id <- !is.na(sim_env$effects[, "effect_id"])
+      is_latest_update <- !duplicated(
+        sim_env$effects[, "effect_id"],
+        fromLast = TRUE
+      )
+      has_been_studied <- !is.na(sim_env$effects[, "study_id"])
+      studied_effects <- sim_env$effects[
+        has_effect_id & is_latest_update & has_been_studied,
+      ]
+      true_mean <- studied_effects[, "true_effect_size"]
+      true_sd <- sqrt(studied_effects[, "true_effect_variance"])
+      posterior_mean <- studied_effects[, "posterior_effect_size"]
+      posterior_sd <- sqrt(studied_effects[, "posterior_effect_variance"])
+      prior_mean <- sim_env$uninformed_prior_mean
+      prior_sd <- sqrt(sim_env$uninformed_prior_variance)
+      # TEMP: testing savage-dickey method. Effect-level total progress: KL vs Savage-Dickey.
+      if (params$truth_contribution_method == "savage_dickey") {
+        log_prior_at_true <- stats::dnorm(
+          true_mean,
+          prior_mean,
+          prior_sd,
+          log = TRUE
+        )
+        log_posterior_at_true <- stats::dnorm(
+          true_mean,
+          posterior_mean,
+          posterior_sd,
+          log = TRUE
+        )
+        total_scientific_progress <- sum(
+          log_posterior_at_true - log_prior_at_true
+        )
+      } else {
+        baseline_kl <- kl_norm(true_mean, true_sd, prior_mean, prior_sd)
+        current_kl <- kl_norm(true_mean, true_sd, posterior_mean, posterior_sd)
+        total_scientific_progress <- sum(baseline_kl - current_kl)
+      }
+
+      # Calculating total resources (timesteps) that count towards published knowledge
+      total_timesteps <- sum(
+        sim_env$studies[, "timesteps_duration"],
+        na.rm = TRUE
+      )
+      published_timesteps <- sum(
+        sim_env$studies[
+          sim_env$studies[, "publication_status"] == 1,
+          "timesteps_duration"
+        ],
+        na.rm = TRUE
+      )
+      perc_resources_published <- 100 * published_timesteps / total_timesteps
+
+      # Store all in results df
+      result_df <- as.data.frame(lapply(sweep_param_names, function(nm) {
+        sweep_params[[nm]][i]
+      }))
+      names(result_df) <- sweep_param_names
+      result_df$seed <- sweep_params$seed[i]
+      result_df$mean_replication_rate <- mean_rep_rate
+      result_df$mean_original_published <- mean_original_published
+      result_df$mean_replication_published <- mean_replication_published
+      result_df$rep_success_prepub <- rep_success_prepub
+      result_df$rep_success_postpub <- rep_success_postpub
+      result_df$total_scientific_progress <- total_scientific_progress
+      result_df$perc_resources_published <- perc_resources_published
+      result_df
+    }
+
+  close(pb)
+  sweep_results <- dplyr::bind_rows(sweep_results, results)
+}
+
 stopCluster(cl)
 
 ##############################################################################
