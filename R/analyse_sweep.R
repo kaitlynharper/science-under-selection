@@ -11,10 +11,12 @@ library(patchwork)
 ##############################################################################
 #### LOAD SWEEP OUTPUT ####
 ##############################################################################
-# Option 1: Use the RDS from the most recent run_sweep_parallel.R
-# Option 2: Set use_latest_sweep = FALSE and specify sweep_rds_path manually.
+# Option 1: use_latest_sweep = TRUE loads the path written by run_sweep.R
+# Option 2: use_latest_sweep = FALSE and set sweep_rds_path manually
 use_latest_sweep <- TRUE
-sweep_rds_path <- "output/sweep_results.rds" # used when use_latest_sweep is FALSE
+sweep_rds_path <- "output/sweep_results_2026-06-05-1158.rds" # used when use_latest_sweep is FALSE
+# Latest novelty path:
+# Latest truth path:
 
 # Load results file
 if (use_latest_sweep) {
@@ -77,29 +79,45 @@ for (i in seq_along(param_names)) {
 
 # Outcome variables and labels
 outcomes <- list(
-  list(var = "mean_replication_rate", label = "% replicator agents"),
+  list(
+    var = "mean_replication_rate",
+    label = "Proportion of replicator researchers",
+    range = c(0, 1)
+  ),
   list(
     var = "total_scientific_progress",
-    label = "Total scientific progress (KL)"
+    label = "Total scientific progress",
+    range = c(-Inf, Inf)
   ),
   list(
     var = "mean_replication_published",
-    label = "% replication studies published"
+    label = "% replication studies published",
+    range = c(0, 1)
   ),
-  list(var = "mean_original_published", label = "% original studies published"),
+  list(
+    var = "mean_original_published",
+    label = "% original studies published",
+    range = c(0, 1)
+  ),
   list(
     var = "perc_resources_published",
-    label = "% of time resources published"
+    label = "% of time resources published",
+    range = c(0, 100)
   ),
   list(
     var = "rep_success_prepub",
-    label = "% of successful (all) replications"
+    label = "% of successful (all) replications",
+    range = c(0, 100)
   ),
   list(
     var = "rep_success_postpub",
-    label = "% of successful (published) replications"
+    label = "% of successful (published) replications",
+    range = c(0, 100)
   )
 )
+
+# Use the current script environment so figures are available after source()
+plot_env <- environment()
 
 ##############################################################################
 #### PLOTS PER OUTCOME ####
@@ -138,12 +156,13 @@ for (outcome in outcomes) {
     ) +
     theme_classic() +
     theme(legend.position = "bottom")
+  assign(paste0("fig_marginal_", outcome_var), p_pdp, envir = plot_env)
 
   print(p_pdp)
 
   # ---- Individual scatterplots (one per sweep param) ----
   make_scatter <- function(i) {
-    ggplot(
+    p <- ggplot(
       sweep_results,
       aes(x = .data[[param_names[i]]], y = .data[[outcome_var]])
     ) +
@@ -156,12 +175,14 @@ for (outcome in outcomes) {
       ) +
       labs(x = param_labels[i], y = outcome_label) +
       theme_classic()
+    p
   }
 
   # One scatter per sweep param; grid uses up to 3 columns (works for 1, 2, 3+ params)
   n_params <- length(param_names)
   scatter_list <- lapply(seq_len(n_params), make_scatter)
   p_scatters <- wrap_plots(scatter_list, ncol = min(3L, n_params))
+  assign(paste0("fig_scatter_", outcome_var), p_scatters, envir = plot_env)
   print(p_scatters)
 
   # ---- Three-way interaction line graph (optional) ----
@@ -225,7 +246,11 @@ for (outcome in outcomes) {
     ) +
       geom_smooth(method = "loess", se = FALSE, linewidth = 1) +
       scale_color_manual(
-        values = c("Low" = "#E69F00", "Medium" = "#56B4E9", "High" = "#009E73"),
+        values = c(
+          "Low" = "#F6DFA6", # light amber
+          "Medium" = "#F0B429", # medium amber
+          "High" = "#C98700" # darker amber
+        ),
         name = line1_label
       ) +
       scale_linetype_manual(
@@ -241,7 +266,92 @@ for (outcome in outcomes) {
         legend.title = element_text(color = "black"),
         legend.box = "vertical"
       )
-
     print(p_threeway)
+  }
+  assign(paste0("fig_interaction_", outcome_var), p_threeway, envir = plot_env)
+}
+
+##############################################################################
+#### HEATMAPS: SAMPLE SIZE x PUBLICATION BIAS BY BASE NULL RANGE ####
+##############################################################################
+# Pick which swept variable goes on each heatmap axis
+x_axis_variable <- "nonsig_logistic_midpoint"
+y_axis_variable <- "hold_samples_constant_at"
+# Pick which swept variable defines the value ranges to filter by
+binned_variable <- "base_null_probability"
+
+# Define the two ranges we want to show for the binned variable
+binned_variable_ranges <- list(
+  `0.8_to_1.0` = c(0.7, 1.0),
+  `0.3_to_0.5` = c(0.2, 0.5)
+)
+
+# Build one heatmap per outcome and per selected range
+for (outcome in outcomes) {
+  outcome_var <- outcome$var
+  outcome_label <- outcome$label
+  outcome_range <- outcome$range
+
+  for (range_name in names(binned_variable_ranges)) {
+    range_vals <- binned_variable_ranges[[range_name]]
+
+    # Keep rows in range; plot will bin into visible x/y squares
+    heatmap_data <- sweep_results |>
+      filter(
+        .data[[binned_variable]] >= range_vals[1],
+        .data[[binned_variable]] <= range_vals[2],
+        !is.na(.data[[outcome_var]])
+      )
+
+    # Draw and label the heatmap using 2D summary bins
+    p_heatmap <- ggplot(
+      heatmap_data,
+      aes(
+        x = .data[[x_axis_variable]],
+        y = .data[[y_axis_variable]],
+        z = .data[[outcome_var]]
+      )
+    ) +
+      stat_summary_2d(fun = function(z) mean(z, na.rm = TRUE), bins = 16)
+    if (all(is.finite(outcome_range))) {
+      p_heatmap <- p_heatmap +
+        scale_fill_viridis_c(
+          option = "D",
+          limits = outcome_range,
+          oob = scales::squish
+        )
+    } else {
+      p_heatmap <- p_heatmap + scale_fill_viridis_c(option = "D")
+    }
+    p_heatmap <- p_heatmap +
+      labs(
+        x = param_config[[x_axis_variable]]$label,
+        y = param_config[[y_axis_variable]]$label,
+        fill = outcome_label,
+        title = paste0(
+          param_config[[binned_variable]]$label,
+          " in [",
+          range_vals[1],
+          ", ",
+          range_vals[2],
+          "]"
+        )
+      ) +
+      theme_classic()
+
+    # Print and store each heatmap for later use
+    print(p_heatmap)
+    assign(
+      paste0(
+        "fig_heatmap_",
+        outcome_var,
+        "_",
+        binned_variable,
+        "_",
+        range_name
+      ),
+      p_heatmap,
+      envir = plot_env
+    )
   }
 }
