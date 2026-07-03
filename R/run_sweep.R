@@ -198,6 +198,48 @@ for (sweep_topup in seq_len(max_sweep_topups)) {
       )
       perc_resources_published <- 100 * published_timesteps / total_timesteps
 
+      published_studies <- sim_env$studies[
+        !is.na(sim_env$studies[, "study_id"]) &
+          sim_env$studies[, "publication_status"] == 1,
+        ,
+        drop = FALSE
+      ]
+      published_originals <- published_studies[
+        published_studies[, "study_type"] == 0,
+        ,
+        drop = FALSE
+      ]
+      published_replications <- published_studies[
+        published_studies[, "study_type"] == 1,
+        ,
+        drop = FALSE
+      ]
+      pct_sig_among <- function(studies_subset) {
+        if (nrow(studies_subset) == 0L) {
+          return(NA_real_)
+        }
+        100 * mean(studies_subset[, "p_value"] < 0.05, na.rm = TRUE)
+      }
+      pct_published_originals_sig <- pct_sig_among(published_originals)
+      pct_published_originals_nonsig <- if (nrow(published_originals) == 0L) {
+        NA_real_
+      } else {
+        100 * mean(published_originals[, "p_value"] >= 0.05, na.rm = TRUE)
+      }
+      pct_published_replications_sig <- pct_sig_among(published_replications)
+      pct_published_replications_nonsig <- if (
+        nrow(published_replications) == 0L
+      ) {
+        NA_real_
+      } else {
+        100 * mean(published_replications[, "p_value"] >= 0.05, na.rm = TRUE)
+      }
+      pct_published_are_replications <- if (nrow(published_studies) == 0L) {
+        NA_real_
+      } else {
+        100 * mean(published_studies[, "study_type"] == 1, na.rm = TRUE)
+      }
+
       # Store all in results df
       if (length(sweep_param_names) == 0L) {
         result_df <- data.frame(seed = sweep_params$seed[i])
@@ -215,6 +257,12 @@ for (sweep_topup in seq_len(max_sweep_topups)) {
       result_df$rep_success_postpub <- rep_success_postpub
       result_df$total_scientific_progress <- total_scientific_progress
       result_df$perc_resources_published <- perc_resources_published
+      result_df$pct_published_originals_sig <- pct_published_originals_sig
+      result_df$pct_published_originals_nonsig <- pct_published_originals_nonsig
+      result_df$pct_published_replications_sig <- pct_published_replications_sig
+      result_df$pct_published_replications_nonsig <-
+        pct_published_replications_nonsig
+      result_df$pct_published_are_replications <- pct_published_are_replications
       result_df
     }
 
