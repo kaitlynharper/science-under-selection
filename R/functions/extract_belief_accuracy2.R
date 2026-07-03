@@ -91,3 +91,90 @@ extract_belief_accuracy2 <- function(sim_env) {
   }
   out
 }
+
+#' Extract Total Scientific Progress Over Time
+#'
+#' Matches the end-of-simulation \code{total_scientific_progress} measure from
+#' parameter sweeps: for each timestep, sums over studied effects the reduction
+#' in KL divergence from the uninformed prior to the current posterior at truth.
+#'
+#' @param sim_env An environment containing simulation results
+#'
+#' @return A data frame with one row per timestep (0 to n_timesteps) containing
+#'   \code{timestep} and \code{total_scientific_progress}.
+#'
+#' @details Beliefs update when a study is run, which may be before
+#'   \code{timestep_completed}; study start time is
+#'   \code{timestep_completed - timesteps_duration}.
+#'
+#' @seealso \code{\link{extract_belief_accuracy2}}
+extract_total_scientific_progress <- function(sim_env) {
+  studies <- as.data.frame(sim_env$studies)
+  published_studies <- studies[
+    !is.na(studies$study_id) & studies$publication_status == 1,
+    c("study_id", "timestep_completed", "timesteps_duration"),
+    drop = FALSE
+  ]
+  published_studies$timestep_started <-
+    published_studies$timestep_completed -
+    published_studies$timesteps_duration
+
+  effects <- as.data.frame(sim_env$effects)
+  effects <- effects[
+    !is.na(effects$effect_id) & !is.na(effects$study_id),
+    ,
+    drop = FALSE
+  ]
+  effects <- merge(
+    effects,
+    published_studies[, c("study_id", "timestep_started")],
+    by = "study_id",
+    sort = FALSE
+  )
+
+  timesteps <- 0:sim_env$n_timesteps
+  n_t <- length(timesteps)
+  prior_mean <- sim_env$uninformed_prior_mean
+  prior_sd <- sqrt(sim_env$uninformed_prior_variance)
+  use_savage_dickey <- identical(sim_env$truth_contribution_method, "savage_dickey")
+
+  out <- data.frame(
+    timestep = timesteps,
+    total_scientific_progress = numeric(n_t)
+  )
+
+  for (i in seq_along(timesteps)) {
+    threshold <- timesteps[i]
+    relevant <- effects[effects$timestep_started <= threshold, , drop = FALSE]
+
+    if (nrow(relevant) == 0) {
+      next
+    }
+
+    latest_idx <- !duplicated(relevant$effect_id, fromLast = TRUE)
+    latest <- relevant[latest_idx, , drop = FALSE]
+
+    true_mean <- latest$true_effect_size
+    true_sd <- sqrt(latest$true_effect_variance)
+    post_mean <- latest$posterior_effect_size
+    post_sd <- sqrt(latest$posterior_effect_variance)
+
+    if (use_savage_dickey) {
+      log_prior_at_true <- stats::dnorm(
+        true_mean, prior_mean, prior_sd, log = TRUE
+      )
+      log_posterior_at_true <- stats::dnorm(
+        true_mean, post_mean, post_sd, log = TRUE
+      )
+      out$total_scientific_progress[i] <- sum(
+        log_posterior_at_true - log_prior_at_true
+      )
+    } else {
+      baseline_kl <- kl_norm(true_mean, true_sd, prior_mean, prior_sd)
+      current_kl <- kl_norm(true_mean, true_sd, post_mean, post_sd)
+      out$total_scientific_progress[i] <- sum(baseline_kl - current_kl)
+    }
+  }
+
+  out
+}
