@@ -95,8 +95,8 @@ plot_PB <- function(
 # }
 
 # Method PB figure: all nonsig_logistic_midpoint values in one graph
-publication_bias_params <- seq(-0.5, 5, 0.5)
-novelty_range <- seq(0, 5, by = 0.01)
+publication_bias_params <- seq(-0.5, 3, 0.5)
+novelty_range <- seq(0, 3, by = 0.01)
 
 method_pb_figure_data <- expand.grid(
   novelty = novelty_range,
@@ -125,7 +125,7 @@ method_pb_figure_plot <- ggplot(
 ) +
   geom_line(color = "black", linewidth = 1) +
   scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
-  scale_x_continuous(limits = c(0, 5)) +
+  scale_x_continuous(limits = c(0, 3)) +
   scale_linetype_manual(
     values = c("Significant" = "solid", "Non-significant" = "dotted")
   ) +
