@@ -10,6 +10,7 @@
 # the figures. Manuscript inline values are assigned as:
 #   manuscript_stochastic_variability (n_replicates, mean_pct, sd_pct, se_pct, two_se_pct)
 #   manuscript_highlight_replication (mean_pct_033_066, mean_pct_066_1)
+#   manuscript_highlight_published_are_replications (mean_pct_033_066, mean_pct_066_1)
 #   manuscript_highlight_success_prepub (mean_pct_033_066, mean_pct_066_1)
 #   manuscript_highlight_success_postpub (mean_pct_033_066, mean_pct_066_1)
 #   manuscript_format_pct()
@@ -834,6 +835,11 @@ highlight_region_summary <- bind_rows(
   ),
   summarise_highlight_region(
     highlight_sims,
+    "pct_published_are_replications",
+    "Published studies that are replications (%)"
+  ),
+  summarise_highlight_region(
+    highlight_sims,
     "rep_success_prepub",
     "Replication success, pre-publication (%)"
   ),
@@ -849,9 +855,9 @@ cat(
   "\n=== Focal sweep highlighted region summary ===\n\n",
   "Simulations in the red boxes on the focal null-bin heatmaps: base null probability\n",
   "in the middle and upper thirds (0.33-0.66 and 0.66-1), publication bias 2-3,\n",
-  "and sample size 40-50. Summarises % replicator agents and replication success\n",
-  "(pre- and post-publication) across focal sweep LHS points in that region,\n",
-  "by null bin and combined.\n\n",
+  "and sample size 40-50. Summarises % replicator agents, % of published studies\n",
+  "that are replications, and replication success (pre- and post-publication) across\n",
+  "focal sweep LHS points in that region, by null bin and combined.\n\n",
   sep = ""
 )
 
@@ -873,6 +879,10 @@ manuscript_highlight_replication <- manuscript_highlight_null_bins(
   highlight_region_summary,
   "% replicator agents"
 )
+manuscript_highlight_published_are_replications <- manuscript_highlight_null_bins(
+  highlight_region_summary,
+  "Published studies that are replications (%)"
+)
 manuscript_highlight_success_prepub <- manuscript_highlight_null_bins(
   highlight_region_summary,
   "Replication success, pre-publication (%)"
@@ -890,7 +900,7 @@ realistic_montecarlo_path <- here(
   "realistic_condition_montecarlo.rds"
 )
 
-manuscript_format_pct <- function(x, digits = 1) {
+manuscript_format_pct <- function(x, digits = 0) {
   paste0(format(round(x, digits), nsmall = digits, trim = TRUE), "%")
 }
 
