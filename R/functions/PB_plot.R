@@ -141,3 +141,51 @@ method_pb_figure_plot <- ggplot(
     plot.title = element_text(hjust = 0.5),
     plot.subtitle = element_text(hjust = 0.5)
   )
+
+# Updated PB values: sig line matches lowest nonsig curve (midpoint = -0.5)
+publication_bias_params <- seq(-0.5, 3, 0.5)
+novelty_range <- seq(0, 3, by = 0.01)
+
+method_pb_figure_data <- expand.grid(
+  novelty = novelty_range,
+  midpoint = publication_bias_params
+)
+method_pb_figure_data$publication_prob <- with(
+  method_pb_figure_data,
+  logistic_nonsignificant(novelty, midpoint, 3)
+)
+method_pb_figure_data$type <- "Non-significant"
+method_pb_figure_data$curve_id <- as.character(method_pb_figure_data$midpoint)
+
+sig_data <- data.frame(
+  novelty = novelty_range,
+  midpoint = NA_real_,
+  publication_prob = logistic_significant(novelty_range, 0, -0.5, 3),
+  type = "Significant",
+  curve_id = "Significant"
+)
+
+method_pb_figure_data <- rbind(sig_data, method_pb_figure_data)
+
+method_pb_figure_plot <- ggplot(
+  method_pb_figure_data,
+  aes(x = novelty, y = publication_prob, linetype = type, group = curve_id)
+) +
+  geom_line(color = "black", linewidth = 1) +
+  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
+  scale_x_continuous(limits = c(0, 3)) +
+  scale_linetype_manual(
+    values = c("Significant" = "solid", "Non-significant" = "dotted")
+  ) +
+  labs(
+    title = "UPDATED PB VALUES",
+    x = "Novelty",
+    y = "Publication Probability",
+    linetype = "Result type"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
