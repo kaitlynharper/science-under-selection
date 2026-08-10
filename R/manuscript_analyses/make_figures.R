@@ -24,8 +24,6 @@
 #   fig_scatter_focal_total_scientific_progress
 #   fig_heatmap_null_bins_mean_replication_rate
 #   fig_heatmap_null_bins_total_scientific_progress
-#   fig_realistic_single_mean_replication_rate
-#   fig_realistic_single_scientific_progress
 #
 # Publication bias:
 #   fig_publication_composition
@@ -550,100 +548,6 @@ make_null_bin_heatmaps <- function(
     theme(legend.position = "bottom")
 }
 
-single_sim_replicator_timeseries <- function(results) {
-  agents <- as.data.frame(results$agents) |> filter(!is.na(researcher_id))
-  career_steps <- seq(
-    0,
-    results$n_timesteps,
-    by = results$n_timesteps_per_career_step
-  )
-
-  do.call(
-    rbind,
-    lapply(career_steps, function(i) {
-      active_agents <- agents |>
-        filter(
-          !is.na(timestep_active),
-          timestep_active <= i,
-          timestep_inactive > i | is.na(timestep_inactive)
-        )
-      data.frame(
-        timestep = i,
-        avg_replication_prob = mean(active_agents$replication_probability)
-      )
-    })
-  )
-}
-
-single_sim_progress_timeseries <- function(results) {
-  extract_total_scientific_progress(results)
-}
-
-add_single_sim_burn_in <- function(plot, results) {
-  burn_end <- results$burn_in_period
-  plot +
-    annotate(
-      "rect",
-      xmin = 0,
-      xmax = burn_end,
-      ymin = -Inf,
-      ymax = Inf,
-      alpha = 0.08,
-      fill = "grey35"
-    ) +
-    annotate(
-      "text",
-      x = burn_end / 2,
-      y = Inf,
-      label = "Burn-in",
-      vjust = 1.5,
-      size = 3.2,
-      fontface = "italic",
-      color = "grey45"
-    )
-}
-
-add_single_sim_switch_vline <- function(plot, results) {
-  if (is.na(results$switch_conditions_at)) {
-    return(plot)
-  }
-  plot +
-    geom_vline(
-      xintercept = results$switch_conditions_at,
-      linetype = "dashed",
-      color = "grey55"
-    )
-}
-
-make_single_sim_replicator_plot <- function(results) {
-  plot_data <- single_sim_replicator_timeseries(results)
-  p <- ggplot(plot_data, aes(x = timestep, y = avg_replication_prob)) +
-    geom_line(linewidth = 1.1, color = "black") +
-    scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
-    labs(
-      title = "Realistic condition (example simulation)",
-      x = "Timestep",
-      y = "% replicator agents"
-    ) +
-    theme_classic()
-  p <- add_single_sim_burn_in(p, results)
-  add_single_sim_switch_vline(p, results)
-}
-
-make_single_sim_progress_plot <- function(results) {
-  plot_data <- single_sim_progress_timeseries(results)
-  p <- ggplot(plot_data, aes(x = timestep, y = total_scientific_progress)) +
-    geom_line(linewidth = 1.1, color = "black") +
-    labs(
-      title = "Realistic condition (example simulation)",
-      x = "Timestep",
-      y = "Total scientific progress"
-    ) +
-    theme_classic()
-  p <- add_single_sim_burn_in(p, results)
-  add_single_sim_switch_vline(p, results)
-}
-
 make_publication_composition_plot <- function(sweep_results) {
   composition_vars <- c(
     pct_published_originals_sig = "Published originals that are significant",
@@ -734,39 +638,6 @@ if (file.exists(publication_bias_path)) {
     "Skipping publication composition plot: ",
     publication_bias_path,
     " not found."
-  )
-}
-
-realistic_single_sim_path <- here(
-  "R",
-  "manuscript_analyses",
-  "output",
-  "realistic_condition_single_simulation",
-  "realistic_condition_single_simulation.rds"
-)
-
-if (file.exists(realistic_single_sim_path)) {
-  realistic_single_sim <- readRDS(realistic_single_sim_path)$results
-  assign(
-    "fig_realistic_single_mean_replication_rate",
-    make_single_sim_replicator_plot(realistic_single_sim),
-    envir = plot_env
-  )
-  assign(
-    "fig_realistic_single_scientific_progress",
-    make_single_sim_progress_plot(realistic_single_sim),
-    envir = plot_env
-  )
-  plot_order <- c(
-    plot_order,
-    "fig_realistic_single_mean_replication_rate",
-    "fig_realistic_single_scientific_progress"
-  )
-} else {
-  message(
-    "Skipping realistic single-simulation plots: ",
-    realistic_single_sim_path,
-    " not found. Run R/manuscript_analyses/realistic_condition_single_simulation.R."
   )
 }
 
