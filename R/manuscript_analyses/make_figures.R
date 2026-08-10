@@ -84,7 +84,7 @@ outcomes <- list(
 
 highlight_region <- list(
   null_bins = c("0.33-0.66", "0.66-1"),
-  sample_size = c(40, 50),
+  sample_size = c(20, 40),
   nonsig_logistic_midpoint = c(2, 3)
 )
 
@@ -583,7 +583,7 @@ make_publication_composition_plot <- function(sweep_results) {
     plot_data,
     aes(x = nonsig_logistic_midpoint, y = pct, color = metric)
   ) +
-    geom_hline(yintercept = c(3, 96), linetype = "dotted", color = "black") +
+    geom_hline(yintercept = c(1, 96), linetype = "dotted", color = "black") +
     geom_point(alpha = 0.25, size = 1.2) +
     geom_smooth(method = "loess", se = FALSE, linewidth = 1.1, span = 0.75) +
     scale_color_manual(

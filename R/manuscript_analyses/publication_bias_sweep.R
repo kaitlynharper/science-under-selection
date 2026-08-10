@@ -37,7 +37,7 @@ base_params <- list(
   duration_per_observation = 0.1,
   duration_original_intercept = 1,
   n_effects = 500000,
-  base_null_probability = 0.5,
+  base_null_probability = 0.9,
   effect_size_mean = 0.3,
   effect_size_variance = 0.1,
   uninformed_prior_mean = 0,
@@ -47,8 +47,8 @@ base_params <- list(
   career_turnover_selection_rate = 0,
   innovation_sd = 0,
   mutation_rate = 0,
-  initial_replication_rate = 0.1,
-  hold_samples_constant_at = 50,
+  initial_replication_rate = 0.01,
+  hold_samples_constant_at = 20,
   replications_dynamic_sample_sizes = 1,
   publication_bias = 1, # 0 = no publication bias, 1 = publication bias on
   sig_lower_asymptote = 0, # minimum publication probability for p < .05 results
