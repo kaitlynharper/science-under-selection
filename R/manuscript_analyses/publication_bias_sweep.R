@@ -50,8 +50,12 @@ base_params <- list(
   initial_replication_rate = 0.1,
   hold_samples_constant_at = 50,
   replications_dynamic_sample_sizes = 1,
-  publication_bias = 2,
-  nonsig_logistic_midpoint = NA,
+  publication_bias = 1, # 0 = no publication bias, 1 = publication bias on
+  sig_lower_asymptote = 0, # minimum publication probability for p < .05 results
+  sig_logistic_midpoint = -0.5, # novelty midpoint for significant results
+  sig_logistic_steepness = 3, # steepness of logistic curve for significant results
+  nonsig_logistic_midpoint = 3, # novelty midpoint for non-significant results (swept)
+  nonsig_logistic_steepness = 3, # steepness of logistic curve for non-significant results
   all_replications_published = 0,
   burn_in_period = 35,
   truth_contribution_method = "savage_dickey"

@@ -87,7 +87,7 @@ outcomes <- list(
 highlight_region <- list(
   null_bins = c("0.33-0.66", "0.66-1"),
   sample_size = c(40, 50),
-  publication_bias = c(2, 3)
+  nonsig_logistic_midpoint = c(2, 3)
 )
 
 focal_dir <- here(
@@ -487,8 +487,8 @@ make_null_bin_heatmaps <- function(
   } else {
     data.frame(
       null_bin = highlight_region$null_bins,
-      xmin = min(highlight_region$publication_bias),
-      xmax = max(highlight_region$publication_bias),
+      xmin = min(highlight_region$nonsig_logistic_midpoint),
+      xmax = max(highlight_region$nonsig_logistic_midpoint),
       ymin = min(highlight_region$sample_size),
       ymax = max(highlight_region$sample_size)
     )
@@ -787,8 +787,8 @@ highlight_sims <- focal_for_heatmaps$results |>
     null_bin %in% highlight_region$null_bins,
     between(
       nonsig_logistic_midpoint,
-      min(highlight_region$publication_bias),
-      max(highlight_region$publication_bias)
+      min(highlight_region$nonsig_logistic_midpoint),
+      max(highlight_region$nonsig_logistic_midpoint)
     ),
     between(
       hold_samples_constant_at,

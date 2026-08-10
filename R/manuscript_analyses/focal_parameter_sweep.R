@@ -37,8 +37,8 @@ source(here("R", "model.R"))
 # Copied from set_sweep_parameters.R at time of manuscript analysis.
 ##############################################################################
 
-n_sims_per_batch <- 200L
-n_batches <- 10L
+n_sims_per_batch <- 20L
+n_batches <- 5L
 n_cores <- parallel::detectCores() - 1
 max_sweep_topups <- 3L # re-run missing seeds within a batch if parallel jobs fail
 
@@ -50,7 +50,7 @@ sweep_param_names <- c(
 
 base_params <- list(
   n_agents = 1000,
-  n_timesteps = 350,
+  n_timesteps = 1000,
   n_timesteps_per_career_step = 35,
   duration_per_observation = 0.1,
   duration_original_intercept = 1,
@@ -64,12 +64,16 @@ base_params <- list(
   switch_conditions_at = NA,
   career_turnover_selection_rate = 0.5,
   innovation_sd = 0,
-  mutation_rate = 0.1,
+  mutation_rate = 0.02,
   initial_replication_rate = 0,
   hold_samples_constant_at = 50,
   replications_dynamic_sample_sizes = 1,
-  publication_bias = 2,
-  nonsig_logistic_midpoint = NA,
+  publication_bias = 1, # 0 = no publication bias, 1 = publication bias on
+  sig_lower_asymptote = 0, # minimum publication probability for p < .05 results
+  sig_logistic_midpoint = -0.5, # novelty midpoint for significant results
+  sig_logistic_steepness = 3, # steepness of logistic curve for significant results
+  nonsig_logistic_midpoint = 3, # novelty midpoint for non-significant results (swept)
+  nonsig_logistic_steepness = 3, # steepness of logistic curve for non-significant results
   all_replications_published = 0,
   burn_in_period = 35,
   truth_contribution_method = "savage_dickey"

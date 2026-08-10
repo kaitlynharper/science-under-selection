@@ -28,38 +28,23 @@ logistic_nonsignificant <- function(
 
 #### apply_publication_bias ####
 # Determine which studies get published based on significance and novelty
+# Curve parameters come from params (sweeps override nonsig_logistic_midpoint via run_sweep merge)
+# During burn-in, publication bias is always on; after burn-in, use configured publication_bias
 apply_publication_bias <- function(sim_env) {
   
   n_studies <- nrow(sim_env$new_studies)
+
+  effective_pb <- if (sim_env$timestep <= sim_env$burn_in_period) {
+    1
+  } else {
+    sim_env$publication_bias
+  }
   
-  #### Define publication bias parameters based on publication_bias level ####
-  
-  if(sim_env$publication_bias == 0){ #No publication bias
+  if (effective_pb == 0) { # No publication bias
     # All papers are published
     sim_env$new_studies[, "publication_status"] <- rep(1, n_studies)
     return()
   }
-
-  # Optional override from params (e.g. sweeps); presets below will overwrite, we restore after if set
-  nonsig_midpoint_override <- sim_env$nonsig_logistic_midpoint
-
-  if(sim_env$publication_bias == 1){ # Weak publication bias
-    sim_env$sig_lower_asymptote = 0.5 # minimum publication probability for p < .05 results
-    sim_env$sig_logistic_midpoint = 0.5 # novelty midpoint for significant results
-    sim_env$sig_logistic_steepness = 3 # steepness of logistic curve for significant results
-    sim_env$nonsig_logistic_midpoint = 1.5 # novelty midpoint for non-significant results
-    sim_env$nonsig_logistic_steepness = 3 # steepness of logistic curve for non-significant results
-  }
-  
-  if(sim_env$publication_bias == 2){ # Strong publication bias
-    sim_env$sig_lower_asymptote = 0.8 # minimum publication probability for p < .05 results
-    sim_env$sig_logistic_midpoint = 0.2 # novelty midpoint for significant results
-    sim_env$sig_logistic_steepness = 3 # steepness of logistic curve for significant results
-    sim_env$nonsig_logistic_midpoint = 3 # novelty midpoint for non-significant results
-    sim_env$nonsig_logistic_steepness = 3 # steepness of logistic curve for non-significant results
-  }
-
-  if (!is.na(nonsig_midpoint_override)) sim_env$nonsig_logistic_midpoint <- nonsig_midpoint_override
 
   # determine if each study is significant
   is_significant <- sim_env$new_studies[, "p_value"] < 0.05
@@ -81,16 +66,15 @@ apply_publication_bias <- function(sim_env) {
     nonsig_logistic_midpoint = sim_env$nonsig_logistic_midpoint,
     nonsig_logistic_steepness = sim_env$nonsig_logistic_steepness
   )
-  
+
   # determine publication status (1 = published, 0 = not published)
   sim_env$new_studies[, "publication_status"] <- as.integer(
     runif(n_studies) < publication_prob
   )
   
-  # if all_replications_published is 1, set all replications to published
+  # 1: all replications published; 0: replications follow regular publication bias
   if (sim_env$all_replications_published == 1) {
     is_replication <- sim_env$new_studies[, "study_type"] == 1
     sim_env$new_studies[is_replication, "publication_status"] <- 1
   }
 }
-  

@@ -200,25 +200,11 @@ p1 <- p1 + burn_in
 p2 <- p2 + burn_in
 p3 <- p3 + burn_in
 
-switch(
-  as.character(results$publication_bias),
-  "0" = "no",
-  "1" = "weak",
-  "2" = "strong"
-)
-
 TITLE <- paste0(
   "n = ",
   results$hold_samples_constant_at,
-  ", ",
-  switch(
-    as.character(results$publication_bias),
-    "0" = "no",
-    "1" = "weak",
-    "2" = "medium",
-    "3" = "strong"
-  ),
-  " PB",
+  ", nonsig midpoint = ",
+  results$nonsig_logistic_midpoint,
   ", selection on ",
   ifelse(
     is.na(results$switch_conditions_at),

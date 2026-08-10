@@ -36,7 +36,7 @@ base_params <- list(
   duration_per_observation = 0.1,
   duration_original_intercept = 1,
   n_effects = 500000,
-  base_null_probability = 0.9,  
+  base_null_probability = 0.9,
   effect_size_mean = 0.3,
   effect_size_variance = 0.1,
   uninformed_prior_mean = 0,
@@ -45,15 +45,19 @@ base_params <- list(
   switch_conditions_at = NA,
   career_turnover_selection_rate = 0.5,
   innovation_sd = 0,
-  mutation_rate = 0.1,
+  mutation_rate = 0.02,
   initial_replication_rate = 0,
   hold_samples_constant_at = 30,
   replications_dynamic_sample_sizes = 1,
-  publication_bias = 2,
-  nonsig_logistic_midpoint = 2,
-  all_replications_published = 1,
+  publication_bias = 1, # 0 = no publication bias, 1 = publication bias on
+  sig_lower_asymptote = 0, # minimum publication probability for p < .05 results
+  sig_logistic_midpoint = -0.5, # novelty midpoint for significant results
+  sig_logistic_steepness = 3, # steepness of logistic curve for significant results
+  nonsig_logistic_midpoint = 2, # novelty midpoint for non-significant results
+  nonsig_logistic_steepness = 3, # steepness of logistic curve for non-significant results
+  all_replications_published = 0, # 0 = normal publication bias, 1 = all replications published
   burn_in_period = 300,
-  truth_contribution_method = "kl"
+  truth_contribution_method = "savage_dickey"
 )
 
 ##############################################################################

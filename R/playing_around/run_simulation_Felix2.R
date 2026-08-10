@@ -51,8 +51,12 @@ params <- list(
   initial_replication_rate = 0, # initial proportion of agents who are replicators (0 or 1)
   hold_samples_constant_at = 50, # base sample size for all studies (originals always use this)
   replications_dynamic_sample_sizes = 1, # 0 = replications use hold_samples_constant_at, 1 = replications use 80% power of original effect, or 0.3 (if original non-sig)
-  publication_bias = 2, # 0 = no publication bias, 1 = weak publication bias, 2 = strong publication bias
-  set_nonsig_logistic_midpoint = 2, # for setting specific pub bias function when sweeping
+  publication_bias = 1, # 0 = no publication bias, 1 = publication bias on
+  sig_lower_asymptote = 0, # minimum publication probability for p < .05 results
+  sig_logistic_midpoint = -0.5, # novelty midpoint for significant results
+  sig_logistic_steepness = 3, # steepness of logistic curve for significant results
+  nonsig_logistic_midpoint = 2, # novelty midpoint for non-significant results
+  nonsig_logistic_steepness = 3, # steepness of logistic curve for non-significant results
   all_replications_published = 1, # 0 = normal publication bias, 1 = all replications published regardless of bias
 
   # Additional parameters
@@ -70,7 +74,7 @@ if (exists("run_conditions")) {
 
 if (exists("run_sweep")) {
   params$hold_samples_constant_at <- hold_samples_constant_at
-  params$set_nonsig_logistic_midpoint <- nonsig_logistic_midpoint
+  params$nonsig_logistic_midpoint <- nonsig_logistic_midpoint
   params$base_null_probability <- base_null_probability
 }
 
