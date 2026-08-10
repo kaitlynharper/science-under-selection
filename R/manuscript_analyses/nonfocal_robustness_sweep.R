@@ -162,7 +162,8 @@ message(
 scenarios <- list(
   optimistic_prior = list(
     label = "Optimistic prior",
-    overrides = list(uninformed_prior_mean = 0.5)
+    overrides = list(uninformed_prior_mean = 0.3,
+    uninformed_prior_variance = 0.25)
   ),
   tight_prior = list(
     label = "Tight prior",
