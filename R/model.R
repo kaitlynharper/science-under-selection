@@ -76,23 +76,6 @@ run_simulation <- function(params, verbose = 1) {
     }
   }
 
-  # Drop trailing empty rows from pre-allocated matrices
-  sim_env$effects <- sim_env$effects[
-    !is.na(sim_env$effects[, "effect_id"]),
-    ,
-    drop = FALSE
-  ]
-  sim_env$studies <- sim_env$studies[
-    !is.na(sim_env$studies[, "study_id"]),
-    ,
-    drop = FALSE
-  ]
-  sim_env$agents <- sim_env$agents[
-    !is.na(sim_env$agents[, "researcher_id"]),
-    ,
-    drop = FALSE
-  ]
-
   # Return the env
   return(sim_env)
 }

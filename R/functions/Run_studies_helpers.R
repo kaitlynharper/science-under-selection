@@ -135,15 +135,8 @@ assign_effects <- function(sim_env, verbose = FALSE) {
       posterior_effect_variance = sim_env$uninformed_prior_variance,
       study_id = NA
     )
-    # plus an NA block for effect updates to be stored as papers are published
-    na_block <- matrix(
-      NA,
-      nrow = sim_env$n_agents * sim_env$n_timesteps,
-      ncol = ncol(sim_env$effects)
-    )
-    colnames(na_block) <- colnames(sim_env$effects)
-    # Append new block and NA block to effects matrix
-    sim_env$effects <- rbind(sim_env$effects, new_rows, na_block)
+    # Append new effects to effects matrix
+    sim_env$effects <- rbind(sim_env$effects, new_rows)
     # Recompute available original effects
     available_original_effects <- sim_env$effects[
       !sim_env$effects[, "effect_id"] %in% published_completed_effect_ids &
@@ -445,18 +438,7 @@ update_effects_beliefs <- function(sim_env) {
     return() #finish if no published studies
   }
 
-  # find next available index in effects matrix
-  # (first row where effect_id is NA, indicating an unfilled row)
-  available_rows <- which(is.na(sim_env$effects[, "effect_id"]))
-
-  if (length(available_rows) < n_published) {
-    stop("Insufficient rows in effects matrix at timestep ", sim_env$timestep)
-  }
-
-  start_index <- available_rows[1]
-  end_index <- start_index + n_published - 1
-
-  # create new rows for each published study
+  # create new rows for each published study and append
   new_effect_rows <- cbind(
     effect_id = sim_env$new_studies[is_published, "effect_id"],
     timestep = sim_env$new_studies[is_published, "timestep_completed"],
@@ -468,7 +450,5 @@ update_effects_beliefs <- function(sim_env) {
     posterior_effect_variance = sim_env$new_posterior_vars[is_published],
     study_id = sim_env$new_studies[is_published, "study_id"]
   )
-
-  # fill in rows directly
-  sim_env$effects[start_index:end_index, ] <- new_effect_rows
+  sim_env$effects <- rbind(sim_env$effects, new_effect_rows)
 }

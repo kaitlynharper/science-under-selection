@@ -1,10 +1,8 @@
 #### Function: initialize_studies_matrix ####
 
 initialize_studies_matrix <- function(sim_env) {
-  # Initialize matrix of studies
-  # TODO update this calculation once we have better calibration of study counts
-  total_studies <- sim_env$n_agents * sim_env$n_timesteps
-  sim_env$studies <- matrix(NA, nrow = total_studies, ncol = 14)
+  # Initialize empty studies matrix (grows via rbind as studies are run)
+  sim_env$studies <- matrix(NA, nrow = 0, ncol = 14)
   colnames(sim_env$studies) <- c(
     "study_id",
     "researcher_id",
