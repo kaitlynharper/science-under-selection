@@ -24,24 +24,24 @@ assign_effects <- function(sim_env, verbose = FALSE) {
     sim_env$new_studies[, "replication_probability"]
   sim_env$new_studies[, "study_type"] <- ifelse(sim_env$is_replication, 1, 0)
 
-  # completed published studies (public knowledge)
-  published_completed <- sim_env$studies[, "publication_status"] == 1 &
-    !is.na(sim_env$studies[, "timestep_completed"]) &
-    sim_env$studies[, "timestep_completed"] <= sim_env$timestep
+  # pull columns once, then index into those vectors
+  # as.numeric: empty studies matrix is logical (matrix(NA, 0, ...))
+  effect_ids <- as.numeric(sim_env$studies[, "effect_id"])
+  completed_at <- sim_env$studies[, "timestep_completed"]
+  is_published <- sim_env$studies[, "publication_status"] == 1 &
+    !is.na(completed_at)
 
-  # in-progress published studies (will become public knowledge)
-  published_in_progress <- sim_env$studies[, "publication_status"] == 1 &
-    sim_env$studies[, "timestep_completed"] > sim_env$timestep
+  sim_env$published_completed <- is_published &
+    completed_at <= sim_env$timestep
+  published_in_progress <- is_published &
+    completed_at > sim_env$timestep
 
-  published_completed_effect_ids <- unique(sim_env$studies[
-    published_completed & !is.na(sim_env$studies[, "effect_id"]),
-    "effect_id"
-  ])
-
-  published_in_progress_effect_ids <- unique(sim_env$studies[
-    published_in_progress & !is.na(sim_env$studies[, "effect_id"]),
-    "effect_id"
-  ])
+  published_completed_effect_ids <- unique(
+    effect_ids[sim_env$published_completed]
+  )
+  published_in_progress_effect_ids <- unique(
+    effect_ids[published_in_progress]
+  )
 
   # identify available effect_ids for original studies
 
@@ -135,7 +135,7 @@ assign_effects <- function(sim_env, verbose = FALSE) {
   # count publications including in-progress to deprioritize effects already being studied
   # (only effects with completed studies are actually replicable)
   effect_ids <- sim_env$studies[, "effect_id"]
-  pub <- published_completed | published_in_progress
+  pub <- sim_env$published_completed | published_in_progress
   # as.numeric: empty studies matrix is logical (matrix(NA, 0, ...))
   publication_counts <- tabulate(
     as.numeric(effect_ids[pub & !is.na(effect_ids)]),
@@ -156,11 +156,8 @@ assign_effects <- function(sim_env, verbose = FALSE) {
 prepare_information <- function(sim_env) {
   # published completed originals (only needed for replications)
   if (any(sim_env$is_replication)) {
-    pub_orig <- sim_env$studies[, "study_type"] == 0 &
-      sim_env$studies[, "publication_status"] == 1 &
-      !is.na(sim_env$studies[, "timestep_completed"]) &
-      sim_env$studies[, "timestep_completed"] <= sim_env$timestep &
-      !is.na(sim_env$studies[, "estimated_mean"])
+    pub_orig <- sim_env$published_completed &
+      sim_env$studies[, "study_type"] == 0
 
     pub_orig_studies <- sim_env$studies[pub_orig, , drop = FALSE]
     orig_match <- match(
