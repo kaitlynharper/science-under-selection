@@ -133,18 +133,17 @@ assign_effects <- function(sim_env, verbose = FALSE) {
   # assign effect_ids to replication studies
   # count publications including in-progress to deprioritize effects already being studied
   # (only effects with completed studies are actually replicable)
-  replicable_studies <- (published_completed | published_in_progress) &
-    !is.na(sim_env$studies[, "effect_id"]) &
-    sim_env$studies[, "effect_id"] %in% published_completed_effect_ids
-
-  publication_counts <- table(sim_env$studies[replicable_studies, "effect_id"])
+  effect_ids <- sim_env$studies[, "effect_id"]
+  pub <- published_completed | published_in_progress
+  # as.numeric: empty studies matrix is logical (matrix(NA, 0, ...))
+  publication_counts <- tabulate(
+    as.numeric(effect_ids[pub & !is.na(effect_ids)]),
+    nbins = max_effect_id
+  )
   # add small random jitter to order effects randomly within each count level
-  jittered_counts <- as.numeric(publication_counts) +
-    runif(length(publication_counts)) * 0.01
-  # order effect ids by jittered counts (ascending = fewer publications first)
-  ordered_effects <- as.numeric(names(publication_counts)[order(
-    jittered_counts
-  )])
+  ids <- published_completed_effect_ids
+  jittered_counts <- publication_counts[ids] + runif(length(ids)) * 0.01
+  ordered_effects <- ids[order(jittered_counts)]
   # assign from ordered list (without replacement)
   sim_env$new_studies[sim_env$is_replication, "effect_id"] <- ordered_effects[
     1:sum(sim_env$is_replication)
