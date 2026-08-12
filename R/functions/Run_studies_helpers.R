@@ -198,8 +198,10 @@ determine_sample_sizes <- function(sim_env) {
   reference_effects <- ifelse(orig_pvals < 0.05, abs(orig_means), 0.3)
 
   # calculate sample sizes for 80% power (one-sided test for replications)
-  rep_sample_sizes <- vapply(
-    reference_effects,
+  # power.t.test is not vectorized; unique deltas (e.g. the 0.3 fallback) share one call
+  unique_d <- unique(reference_effects)
+  unique_n <- vapply(
+    unique_d,
     function(delta) {
       power_result <- power.t.test(
         power = 0.8,
@@ -213,6 +215,7 @@ determine_sample_sizes <- function(sim_env) {
     },
     numeric(1)
   )
+  rep_sample_sizes <- unique_n[match(reference_effects, unique_d)]
 
   sim_env$new_studies[sim_env$is_replication, "sample_size"] <- rep_sample_sizes
 }
