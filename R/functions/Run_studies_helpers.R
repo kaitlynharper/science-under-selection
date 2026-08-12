@@ -55,7 +55,8 @@ assign_effects <- function(sim_env, verbose = FALSE) {
     published_completed_effect_ids,
     published_in_progress_effect_ids
   )
-  max_effect_id <- max(sim_env$effects[, "effect_id"], na.rm = TRUE)
+  # max effect id = number of effects = number of rows in latest_row effect tracker
+  max_effect_id <- length(sim_env$latest_row)
   available_original_effects <- setdiff(seq_len(max_effect_id), taken_effect_ids)
 
   if (verbose) {
