@@ -51,12 +51,12 @@ assign_effects <- function(sim_env, verbose = FALSE) {
   # (as agents would need to know what effects all others are currently working on), but helps
   # avoiding conflicts where multiple original studies try to use the same effect_id.
 
-  available_original_effects <- sim_env$effects[
-    !sim_env$effects[, "effect_id"] %in% published_completed_effect_ids &
-      !sim_env$effects[, "effect_id"] %in% published_in_progress_effect_ids &
-      !is.na(sim_env$effects[, "effect_id"]),
-    "effect_id"
-  ]
+  taken_effect_ids <- c(
+    published_completed_effect_ids,
+    published_in_progress_effect_ids
+  )
+  max_effect_id <- max(sim_env$effects[, "effect_id"], na.rm = TRUE)
+  available_original_effects <- setdiff(seq_len(max_effect_id), taken_effect_ids)
 
   if (verbose) {
     print(paste0(
@@ -95,10 +95,9 @@ assign_effects <- function(sim_env, verbose = FALSE) {
 
   # if not enough original effects, append a new block (double effects) and recompute pool
   n_original <- sum(!sim_env$is_replication)
-  if (n_original > length(unique(available_original_effects))) {
+  if (n_original > length(available_original_effects)) {
     # Create new effects matrix block
-    current_n_effects <- max(sim_env$effects[, "effect_id"], na.rm = TRUE)
-    new_ids <- (current_n_effects + 1):(current_n_effects + sim_env$n_effects)
+    new_ids <- (max_effect_id + 1):(max_effect_id + sim_env$n_effects)
     n_new <- length(new_ids)
     new_rows <- cbind(
       effect_id = new_ids,
@@ -118,12 +117,8 @@ assign_effects <- function(sim_env, verbose = FALSE) {
     # Append new effects to effects matrix
     sim_env$effects <- rbind(sim_env$effects, new_rows)
     # Recompute available original effects
-    available_original_effects <- sim_env$effects[
-      !sim_env$effects[, "effect_id"] %in% published_completed_effect_ids &
-        !sim_env$effects[, "effect_id"] %in% published_in_progress_effect_ids &
-        !is.na(sim_env$effects[, "effect_id"]),
-      "effect_id"
-    ]
+    max_effect_id <- max_effect_id + n_new
+    available_original_effects <- setdiff(seq_len(max_effect_id), taken_effect_ids)
   }
 
   # assign effect_ids to original studies (without replacement)
