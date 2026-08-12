@@ -39,4 +39,6 @@ initialize_effects_matrix <- function(sim_env) {
     posterior_effect_variance = posterior_effect_variances,
     study_id = study_ids
   )
+  # row index of latest belief for each effect_id (1-indexed, dense)
+  sim_env$latest_row <- seq_len(n_effects)
 }

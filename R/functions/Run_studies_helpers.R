@@ -115,7 +115,9 @@ assign_effects <- function(sim_env, verbose = FALSE) {
       study_id = NA
     )
     # Append new effects to effects matrix
+    old_n <- nrow(sim_env$effects)
     sim_env$effects <- rbind(sim_env$effects, new_rows)
+    sim_env$latest_row <- c(sim_env$latest_row, (old_n + 1):(old_n + n_new))
     # Recompute available original effects
     max_effect_id <- max_effect_id + n_new
     available_original_effects <- setdiff(seq_len(max_effect_id), taken_effect_ids)
@@ -169,13 +171,8 @@ prepare_information <- function(sim_env) {
     sim_env$orig_p_value <- pub_orig_studies[orig_match, "p_value"]
   }
 
-  # latest belief row for each assigned effect
-  is_latest <- !duplicated(sim_env$effects[, "effect_id"], fromLast = TRUE)
-  effect_match <- match(
-    sim_env$new_studies[, "effect_id"],
-    sim_env$effects[is_latest, "effect_id"]
-  )
-  effect_rows <- which(is_latest)[effect_match]
+  # latest belief row for each assigned effect (via maintained index)
+  effect_rows <- sim_env$latest_row[sim_env$new_studies[, "effect_id"]]
 
   sim_env$true_means <- sim_env$effects[effect_rows, "true_effect_size"]
   sim_env$true_vars <- sim_env$effects[effect_rows, "true_effect_variance"]
@@ -403,5 +400,7 @@ update_effects_beliefs <- function(sim_env) {
     posterior_effect_variance = sim_env$new_posterior_vars[is_published],
     study_id = sim_env$new_studies[is_published, "study_id"]
   )
+  old_n <- nrow(sim_env$effects)
   sim_env$effects <- rbind(sim_env$effects, new_effect_rows)
+  sim_env$latest_row[new_effect_rows[, "effect_id"]] <- (old_n + 1):(old_n + n_published)
 }
