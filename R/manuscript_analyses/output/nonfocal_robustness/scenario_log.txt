@@ -1,7 +1,0 @@
-optimistic_prior 
-tight_prior 
-large_effects 
-all_reps_published 
-strong_selection 
-slow_originals 
-long_career_window 
