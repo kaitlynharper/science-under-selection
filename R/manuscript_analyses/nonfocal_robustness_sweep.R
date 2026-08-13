@@ -31,7 +31,7 @@ source(here("R", "model.R"))
 # Same as focal_parameter_sweep.R; scenario overrides applied in the loop.
 ##############################################################################
 
-n_sims_per_batch <- 200L #make sure it matches LHS_design from focal_parameter_sweep
+n_sims_per_batch <- 2000L #make sure it matches LHS_design from focal_parameter_sweep
 focal_lhs_batch <- 1L # which batch from focal_parameter_sweep lhs_design.rds
 n_cores <- parallel::detectCores() - 1
 max_sweep_topups <- 3L
@@ -44,7 +44,7 @@ sweep_param_names <- c(
 
 frozen_base_params <- list(
   n_agents = 1000,
-  n_timesteps = 350,
+  n_timesteps = 1000,
   n_timesteps_per_career_step = 35,
   duration_per_observation = 0.1,
   duration_original_intercept = 1,
@@ -58,7 +58,7 @@ frozen_base_params <- list(
   switch_conditions_at = NA,
   career_turnover_selection_rate = 0.5,
   innovation_sd = 0,
-  mutation_rate = 0.1,
+  mutation_rate = 0.02,
   initial_replication_rate = 0,
   hold_samples_constant_at = 50,
   replications_dynamic_sample_sizes = 1,
@@ -166,8 +166,10 @@ message(
 scenarios <- list(
   optimistic_prior = list(
     label = "Optimistic prior",
-    overrides = list(uninformed_prior_mean = 0.3,
-    uninformed_prior_variance = 0.25)
+    overrides = list(
+      uninformed_prior_mean = 0.3,
+      uninformed_prior_variance = 0.25
+    )
   ),
   tight_prior = list(
     label = "Tight prior",
@@ -192,9 +194,9 @@ scenarios <- list(
   long_career_window = list(
     label = "Long career window",
     overrides = list(
-      n_timesteps_per_career_step = 100L,
-      n_timesteps = 1000L,
-      burn_in_period = 100L
+      n_timesteps_per_career_step = 105L,
+      n_timesteps = 3000L,
+      burn_in_period = 105L
     )
   )
 )

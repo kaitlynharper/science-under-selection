@@ -37,7 +37,7 @@ source(here("R", "model.R"))
 # Copied from set_sweep_parameters.R at time of manuscript analysis.
 ##############################################################################
 
-n_sims_per_batch <- 20L
+n_sims_per_batch <- 2000L
 n_batches <- 5L
 n_cores <- parallel::detectCores() - 1
 max_sweep_topups <- 3L # re-run missing seeds within a batch if parallel jobs fail
