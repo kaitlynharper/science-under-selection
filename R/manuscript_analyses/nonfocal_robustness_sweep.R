@@ -194,9 +194,9 @@ scenarios <- list(
   long_career_window = list(
     label = "Long career window",
     overrides = list(
-      n_timesteps_per_career_step = 105L,
-      n_timesteps = 3000L,
-      burn_in_period = 105L
+      n_timesteps_per_career_step = 70L,
+      n_timesteps = 2000L,
+      burn_in_period = 70L
     )
   )
 )
