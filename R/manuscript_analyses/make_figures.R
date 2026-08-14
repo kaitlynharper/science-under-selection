@@ -498,6 +498,11 @@ make_null_bin_heatmaps <- function(
     range(plot_data[[outcome_var]], na.rm = TRUE)
   }
 
+  heatmap_breaks <- list(
+    x = seq(param_config[[x_var]]$min, param_config[[x_var]]$max, length.out = 17),
+    y = seq(param_config[[y_var]]$min, param_config[[y_var]]$max, length.out = 17)
+  )
+
   panels <- lapply(null_labels, function(lbl) {
     panel_plot <- ggplot(
       filter(plot_data, null_bin == lbl),
@@ -507,7 +512,11 @@ make_null_bin_heatmaps <- function(
         z = .data[[outcome_var]]
       )
     ) +
-      stat_summary_2d(fun = function(z) mean(z, na.rm = TRUE), bins = 16) +
+      stat_summary_2d(
+        fun = function(z) mean(z, na.rm = TRUE),
+        breaks = heatmap_breaks
+      ) +
+      coord_cartesian(expand = FALSE) +
       scale_fill_viridis_c(
         option = "D",
         limits = fill_limits,
