@@ -78,7 +78,7 @@ source(here("R", "functions", "extract_belief_accuracy2.R"))
 plot_env <- environment()
 
 outcomes <- list(
-  list(var = "mean_replication_rate", label = "% replicator agents"),
+  list(var = "mean_replication_rate", label = "Replicator share (%)"),
   list(var = "total_scientific_progress", label = "Total scientific progress")
 )
 
@@ -186,7 +186,10 @@ marginal_pdp_data <- function(
         param = param_labels[i],
         x_norm = grid_x,
         x = denorm_param_grid(grid_x, param_config[[i]]),
-        y = predict(fit, newdata = setNames(data.frame(grid_x), norm_col))
+        y = {
+          pred <- predict(fit, newdata = setNames(data.frame(grid_x), norm_col))
+          if (outcome_var == "mean_replication_rate") 100 * pred else pred
+        }
       )
     )
   }
@@ -222,9 +225,14 @@ make_scatter_plot <- function(
   param_colors <- vapply(param_config, `[[`, character(1L), "color")
   n_params <- length(param_names)
 
+  plot_results <- sweep_results
+  if (outcome_var == "mean_replication_rate") {
+    plot_results[[outcome_var]] <- 100 * plot_results[[outcome_var]]
+  }
+
   scatter_list <- lapply(seq_len(n_params), function(i) {
     ggplot(
-      sweep_results,
+      plot_results,
       aes(x = .data[[param_names[i]]], y = .data[[outcome_var]])
     ) +
       geom_point(color = param_colors[i], alpha = 0.6) +
@@ -339,6 +347,9 @@ for (dataset in datasets) {
   } else {
     sweep_output$meta$scenario_label
   }
+  if (dataset$id == "focal") {
+    focal_n_timesteps <- sweep_output$meta$base_params$n_timesteps
+  }
 
   for (outcome in outcomes) {
     outcome_var <- outcome$var
@@ -351,9 +362,15 @@ for (dataset in datasets) {
       outcome_var,
       dataset_label
     )
+    spaghetti_row <- pdp_data
+    if (outcome_var == "total_scientific_progress") {
+      # Scale progress to the focal sweep's duration.
+      spaghetti_row$y <- spaghetti_row$y *
+        focal_n_timesteps / sweep_output$meta$base_params$n_timesteps
+    }
     spaghetti_pdp[[outcome_var]] <- rbind(
       spaghetti_pdp[[outcome_var]],
-      pdp_data
+      spaghetti_row
     )
 
     p_marginal <- make_marginal_plot(
@@ -378,16 +395,6 @@ for (dataset in datasets) {
     plot_order <- c(plot_order, scatter_name)
   }
 }
-
-# Long career window runs 1000 timesteps; scale progress to match other scenarios.
-spaghetti_pdp$total_scientific_progress <- spaghetti_pdp$total_scientific_progress |>
-  mutate(
-    y = if_else(
-      dataset == "Long career window",
-      y * 350 / 1000,
-      y
-    )
-  )
 
 for (outcome in outcomes) {
   outcome_var <- outcome$var
@@ -480,6 +487,10 @@ make_null_bin_heatmaps <- function(
     ) |>
     filter(!is.na(null_bin), !is.na(.data[[outcome_var]]))
 
+  if (outcome_var == "mean_replication_rate") {
+    plot_data[[outcome_var]] <- 100 * plot_data[[outcome_var]]
+  }
+
   highlight_df <- if (is.null(highlight_region)) {
     NULL
   } else {
@@ -493,7 +504,7 @@ make_null_bin_heatmaps <- function(
   }
 
   fill_limits <- if (outcome_var == "mean_replication_rate") {
-    c(0, 1)
+    c(0, 100)
   } else {
     range(plot_data[[outcome_var]], na.rm = TRUE)
   }
@@ -710,7 +721,7 @@ highlight_region_summary <- bind_rows(
   summarise_highlight_region(
     highlight_sims,
     "mean_replication_rate",
-    "% replicator agents",
+    "Replicator share (%)",
     as_proportion = TRUE
   ),
   summarise_highlight_region(
@@ -735,7 +746,7 @@ cat(
   "\n=== Focal sweep highlighted region summary ===\n\n",
   "Simulations in the red boxes on the focal null-bin heatmaps: base null probability\n",
   "in the middle and upper thirds (0.33-0.66 and 0.66-1), publication bias 2-3,\n",
-  "and sample size 40-50. Summarises % replicator agents, % of published studies\n",
+  "and sample size 40-50. Summarises replicator share (%), % of published studies\n",
   "that are replications, and replication success (pre- and post-publication) across\n",
   "focal sweep LHS points in that region, by null bin and combined.\n\n",
   sep = ""
@@ -757,7 +768,7 @@ manuscript_highlight_null_bins <- function(summary, outcome_label) {
 
 manuscript_highlight_replication <- manuscript_highlight_null_bins(
   highlight_region_summary,
-  "% replicator agents"
+  "Replicator share (%)"
 )
 manuscript_highlight_published_are_replications <- manuscript_highlight_null_bins(
   highlight_region_summary,
@@ -815,7 +826,7 @@ if (file.exists(realistic_montecarlo_path)) {
   mc_summary <- rbind(
     monte_carlo_stats(
       montecarlo_results$mean_replication_rate,
-      "Proportion of replicator researchers (%)",
+      "Replicator share (%)",
       as_percent = TRUE
     ),
     monte_carlo_stats(
