@@ -81,8 +81,9 @@ for (i in seq_along(param_names)) {
 outcomes <- list(
   list(
     var = "mean_replication_rate",
-    label = "Proportion of replicator researchers",
-    range = c(0, 1)
+    label = "Replicator share (%)",
+    range = c(0, 100),
+    as_percent = TRUE
   ),
   list(
     var = "total_scientific_progress",
@@ -116,6 +117,14 @@ outcomes <- list(
   )
 )
 
+scale_outcome_data <- function(data, outcome) {
+  out <- data
+  if (isTRUE(outcome$as_percent)) {
+    out[[outcome$var]] <- 100 * out[[outcome$var]]
+  }
+  out
+}
+
 # Use the current script environment so figures are available after source()
 plot_env <- environment()
 
@@ -125,6 +134,8 @@ plot_env <- environment()
 for (outcome in outcomes) {
   outcome_var <- outcome$var
   outcome_label <- outcome$label
+  plot_results <- scale_outcome_data(sweep_results, outcome)
+  plot_norm <- scale_outcome_data(sweep_norm, outcome)
 
   # ---- Partial dependency (all params) ----
   pdp_data <- data.frame()
@@ -132,7 +143,7 @@ for (outcome in outcomes) {
     norm_col <- paste0(param_names[i], "_norm")
     fit <- loess(
       as.formula(paste(outcome_var, "~ get(norm_col)")),
-      data = sweep_norm,
+      data = plot_norm,
       span = 0.75
     )
     grid_x <- seq(0, 1, length.out = 100)
@@ -163,7 +174,7 @@ for (outcome in outcomes) {
   # ---- Individual scatterplots (one per sweep param) ----
   make_scatter <- function(i) {
     p <- ggplot(
-      sweep_results,
+      plot_results,
       aes(x = .data[[param_names[i]]], y = .data[[outcome_var]])
     ) +
       geom_point(color = param_colors[i], alpha = 0.6) +
@@ -213,9 +224,9 @@ for (outcome in outcomes) {
       r2[2]
     )
 
-    col1 <- sweep_results[[threeway_line1_param]]
-    col2 <- sweep_results[[threeway_line2_param]]
-    sweep_binned <- sweep_results |>
+    col1 <- plot_results[[threeway_line1_param]]
+    col2 <- plot_results[[threeway_line2_param]]
+    sweep_binned <- plot_results |>
       mutate(
         line1_level = cut(
           col1,
@@ -291,12 +302,13 @@ for (outcome in outcomes) {
   outcome_var <- outcome$var
   outcome_label <- outcome$label
   outcome_range <- outcome$range
+  plot_results <- scale_outcome_data(sweep_results, outcome)
 
   for (range_name in names(binned_variable_ranges)) {
     range_vals <- binned_variable_ranges[[range_name]]
 
     # Keep rows in range; plot will bin into visible x/y squares
-    heatmap_data <- sweep_results |>
+    heatmap_data <- plot_results |>
       filter(
         .data[[binned_variable]] >= range_vals[1],
         .data[[binned_variable]] <= range_vals[2],
