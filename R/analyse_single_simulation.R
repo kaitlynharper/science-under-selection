@@ -93,11 +93,70 @@ ggplot(
 
 
 # -------------------------------------------------------
-# Quality of literature: Belief accuracy over time
+# Total scientific progress over time
+# Same definition as run_sweep.R, applied at each timestep:
+# latest posterior among effects studied by that timestep, vs uninformed prior.
 
-belief <- extract_belief_accuracy2(results)
-res2 <- left_join(agent_traits, belief, by = "timestep")
+timesteps <- 0:results$n_timesteps
+n_t <- length(timesteps)
+prior_mean <- results$uninformed_prior_mean
+prior_sd <- sqrt(results$uninformed_prior_variance)
+effects_mat <- results$effects
 
+total_scientific_progress <- data.frame(
+  timestep = timesteps,
+  total_scientific_progress = numeric(n_t)
+)
+
+for (i in seq_along(timesteps)) {
+  t <- timesteps[i]
+  relevant <- effects_mat[
+    !is.na(effects_mat[, "effect_id"]) & effects_mat[, "timestep"] <= t,
+    ,
+    drop = FALSE
+  ]
+  if (nrow(relevant) == 0L) {
+    next
+  }
+
+  is_latest_update <- !duplicated(relevant[, "effect_id"], fromLast = TRUE)
+  has_been_studied <- !is.na(relevant[, "study_id"])
+  studied_effects <- relevant[is_latest_update & has_been_studied, , drop = FALSE]
+  if (nrow(studied_effects) == 0L) {
+    next
+  }
+
+  true_mean <- studied_effects[, "true_effect_size"]
+  true_sd <- sqrt(studied_effects[, "true_effect_variance"])
+  posterior_mean <- studied_effects[, "posterior_effect_size"]
+  posterior_sd <- sqrt(studied_effects[, "posterior_effect_variance"])
+
+  if (results$truth_contribution_method == "savage_dickey") {
+    log_prior_at_true <- stats::dnorm(
+      true_mean,
+      prior_mean,
+      prior_sd,
+      log = TRUE
+    )
+    log_posterior_at_true <- stats::dnorm(
+      true_mean,
+      posterior_mean,
+      posterior_sd,
+      log = TRUE
+    )
+    total_scientific_progress$total_scientific_progress[i] <- sum(
+      log_posterior_at_true - log_prior_at_true
+    )
+  } else {
+    baseline_kl <- kl_norm(true_mean, true_sd, prior_mean, prior_sd)
+    current_kl <- kl_norm(true_mean, true_sd, posterior_mean, posterior_sd)
+    total_scientific_progress$total_scientific_progress[i] <- sum(
+      baseline_kl - current_kl
+    )
+  }
+}
+
+res2 <- left_join(agent_traits, total_scientific_progress, by = "timestep")
 
 res_long <- pivot_longer(
   res2,
@@ -130,21 +189,18 @@ p2 <- ggplot(
   )
 
 
-res_long2 <- pivot_longer(
-  res2,
-  cols = c("n_effects_investigated", "n_studies_published"),
-  names_to = "measure",
-  values_to = "value"
-)
-p3 <- ggplot(res_long2, aes(x = timestep, y = value, color = measure)) +
+p3 <- ggplot(
+  total_scientific_progress,
+  aes(x = timestep, y = total_scientific_progress)
+) +
   geom_line() +
-  labs(
-    y = "Cumulative number of effects/studies published",
-    x = "time"
-  ) +
   theme_minimal() +
-  theme(legend.position = c(0.4, 0.9)) +
-  guides(color = guide_legend(nrow = 2, byrow = FALSE, title = ""))
+  labs(
+    y = "Total scientific progress",
+    x = "time",
+    title = "Cumulative scientific progress",
+    subtitle = "Same measure as run_sweep.R, evaluated at each timestep"
+  )
 
 
 # add horizontal line at selection switch time if applicable

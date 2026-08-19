@@ -73,7 +73,6 @@ library(patchwork)
 library(scales)
 
 source(here("R", "functions", "Run_studies_helpers.R"))
-source(here("R", "functions", "extract_belief_accuracy2.R"))
 
 plot_env <- environment()
 
