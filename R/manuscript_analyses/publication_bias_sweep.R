@@ -18,7 +18,7 @@ library(lhs)
 # ---- Source simulation code ----
 function_files <- list.files(here("R", "functions"), full.names = TRUE)
 sapply(function_files, source, .GlobalEnv)
-source(here("R", "model.R"))
+source(here("R", "00_model.R"))
 
 ##############################################################################
 #### FROZEN MANUSCRIPT CONFIG ####
@@ -128,7 +128,7 @@ if (results_are_valid(results_path)) {
   sweep_params$seed <- seq_len(n_sims)
   sweep_params_full <- sweep_params
 
-  source(here("R", "run_sweep.R"), local = FALSE)
+  source(here("R", "04_run_sweep.R"), local = FALSE)
 
   src <- here(sweep_path)
   sweep_output <- readRDS(src)
@@ -143,7 +143,7 @@ if (results_are_valid(results_path)) {
     stop(
       "Sweep results are missing columns: ",
       paste(missing_cols, collapse = ", "),
-      "\nRe-source run_sweep.R with the publication composition metrics."
+      "\nRe-source 04_run_sweep.R with the publication composition metrics."
     )
   }
 

@@ -20,7 +20,7 @@ library(here)
 # Source simulation code once before parallel execution
 function_files <- list.files(here("R", "functions"), full.names = TRUE)
 sapply(function_files, source, .GlobalEnv)
-source(here("R", "model.R"))
+source(here("R", "00_model.R"))
 
 ##############################################################################
 #### FROZEN MANUSCRIPT CONFIG ####
@@ -92,7 +92,7 @@ if (!dir.exists(analysis_dir)) {
 if (file.exists(results_path)) {
   message("Results already exist: ", results_path)
 } else {
-  source(here("R", "run_sweep.R"), local = FALSE)
+  source(here("R", "04_run_sweep.R"), local = FALSE)
 
   src <- here(sweep_path)
   if (!file.rename(src, results_path)) {

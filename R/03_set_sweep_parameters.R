@@ -2,7 +2,7 @@
 # Set sweep parameters
 #
 # Description: Configures which parameters to sweep and their ranges (control
-# panel + master spec). Source this before run_sweep.R, or let run_sweep.R
+# panel + master spec). Source this before 04_run_sweep.R, or let 04_run_sweep.R
 # source it automatically.
 ##############################################################################
 library(here)
@@ -12,7 +12,7 @@ library(lhs)
 # Source all functions once before parallel execution
 function_files <- list.files(here("R", "functions"), full.names = TRUE)
 sapply(function_files, source, .GlobalEnv)
-source(here("R", "model.R"))
+source(here("R", "00_model.R"))
 
 ##############################################################################
 #### CONTROL PANEL ####

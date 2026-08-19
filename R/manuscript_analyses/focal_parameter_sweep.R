@@ -11,13 +11,13 @@
 # Files in that folder:
 #   lhs_design.rds              — all param rows + global seeds; written once
 #   batch_log.txt               — append-only log of completed batch numbers
-#   batch_01.rds … batch_20.rds — one per completed batch (renamed from run_sweep output)
+#   batch_01.rds … batch_20.rds — one per completed batch (renamed from 04_run_sweep output)
 #   focal_sweep_combined.rds    — combined once all batches are present
 #
 # Workflow summary:
 #   1. Load or create LHS design
 #   2. Read batch_log (+ reconcile with batch_XX.rds on disk) to find missing batches
-#   3. For each missing batch: set params → source(run_sweep.R) → rename output → append log
+#   3. For each missing batch: set params → source(04_run_sweep.R) → rename output → append log
 #   4. When all batches done: combine batch files → focal_sweep_combined.rds
 ##############################################################################
 
@@ -30,11 +30,11 @@ library(lhs)
 # Source all functions once before parallel execution
 function_files <- list.files(here("R", "functions"), full.names = TRUE)
 sapply(function_files, source, .GlobalEnv)
-source(here("R", "model.R"))
+source(here("R", "00_model.R"))
 
 ##############################################################################
 #### FROZEN MANUSCRIPT CONFIG ####
-# Copied from set_sweep_parameters.R at time of manuscript analysis.
+# Copied from 03_set_sweep_parameters.R at time of manuscript analysis.
 ##############################################################################
 
 n_sims_per_batch <- 2000L
@@ -255,7 +255,7 @@ if (length(missing_batches) == 0) {
 }
 
 ##############################################################################
-#### BATCH LOOP (one run_sweep call per missing batch) ####
+#### BATCH LOOP (one 04_run_sweep call per missing batch) ####
 ##############################################################################
 
 for (batch_id in missing_batches) {
@@ -271,7 +271,7 @@ for (batch_id in missing_batches) {
     ") ---"
   )
 
-  # Subset LHS rows for this batch; run_sweep expects these objects in the env
+  # Subset LHS rows for this batch; 04_run_sweep.R expects these objects in the env
   sweep_params_full <- lhs_design[
     lhs_design$batch_id == batch_id,
     ,
@@ -280,7 +280,7 @@ for (batch_id in missing_batches) {
   n_sims <- n_sims_per_batch
 
   # Runs parallel sims and saves output/sweep_results_<timestamp>.rds
-  source(here("R", "run_sweep.R"), local = FALSE)
+  source(here("R", "04_run_sweep.R"), local = FALSE)
 
   # Move timestamped output to stable batch file in the analysis folder
   dest <- batch_path(batch_id)

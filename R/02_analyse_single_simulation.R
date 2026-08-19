@@ -4,7 +4,7 @@
 # Description: Time series of replicator share and total scientific progress,
 # plus a novelty vs truth contribution scatter for original and replication
 # studies. Expects a `results` object in the environment (e.g. from
-# run_single_simulation.R).
+# 01_run_single_simulation.R).
 ##############################################################################
 
 library(dplyr)
@@ -20,7 +20,7 @@ n_t <- length(timesteps)
 
 # -------------------------------------------------------
 # Replicator share (%) at each timestep
-# Same quantity as run_sweep.R mean_replication_rate, among agents active
+# Same quantity as 04_run_sweep.R mean_replication_rate, among agents active
 # at that timestep.
 
 replicator_share <- data.frame(
@@ -39,7 +39,7 @@ for (i in seq_along(timesteps)) {
 
 # -------------------------------------------------------
 # Total scientific progress at each timestep
-# Same definition as run_sweep.R: latest posterior among effects studied
+# Same definition as 04_run_sweep.R: latest posterior among effects studied
 # by that timestep, vs uninformed prior.
 
 prior_mean <- results$uninformed_prior_mean

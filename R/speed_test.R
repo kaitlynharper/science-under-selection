@@ -6,10 +6,10 @@ library(lhs)
 # ---- Source simulation code ----
 # This repo has no .Rproj; anchor here() from this script's path (RStudio + Positron).
 # Run via Source / Run script — not by pasting chunks into the console.
-here::i_am("R/manuscript_analyses/speed_test.R")
+here::i_am("R/speed_test.R")
 
 sapply(list.files(here("R", "functions"), full.names = TRUE), source, .GlobalEnv)
-source(here("R", "model.R"))
+source(here("R", "00_model.R"))
 
 # ---- Set params ----
 base_params <- list(

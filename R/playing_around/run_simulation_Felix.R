@@ -15,7 +15,7 @@ library(dplyr)
 # Source model files (incl all function files)
 function_files <- list.files(here("R", "functions"), full.names = TRUE)
 sapply(function_files, source, .GlobalEnv)
-source(here("R", "model.R"))
+source(here("R", "00_model.R"))
 
 # Set seed for reproducibility
 set.seed(1234)

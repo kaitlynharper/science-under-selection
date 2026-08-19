@@ -2,15 +2,15 @@
 # Run sweep (parallel version)
 #
 # Description: Runs simulations across many parameter combinations in parallel
-# and saves results with metadata to RDS for analysis in analyse_sweep.R.
-# Source set_sweep_parameters.R first, or run it before this script.
+# and saves results with metadata to RDS for analysis in 05_analyse_sweep.R.
+# Source 03_set_sweep_parameters.R first, or run it before this script.
 ##############################################################################
 library(here)
 library(foreach)
 library(doSNOW)
 
 if (!exists("base_params")) {
-  source(here("R", "set_sweep_parameters.R"))
+  source(here("R", "03_set_sweep_parameters.R"))
 }
 
 ##############################################################################
@@ -289,5 +289,5 @@ sweep_output <- list(
 timestamp <- format(Sys.time(), "%Y-%m-%d-%H%M")
 sweep_path <- paste0("output/sweep_results_", timestamp, ".rds")
 saveRDS(sweep_output, here(sweep_path))
-# Save path so analyse_sweep.R can load "latest" run
+# Save path so 05_analyse_sweep.R can load "latest" run
 writeLines(sweep_path, here("output/last_sweep_path.txt"))

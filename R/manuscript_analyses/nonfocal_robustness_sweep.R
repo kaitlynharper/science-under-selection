@@ -24,7 +24,7 @@ library(dplyr)
 # ---- Source simulation code ----
 function_files <- list.files(here("R", "functions"), full.names = TRUE)
 sapply(function_files, source, .GlobalEnv)
-source(here("R", "model.R"))
+source(here("R", "00_model.R"))
 
 ##############################################################################
 #### FROZEN MANUSCRIPT CONFIG ####
@@ -266,7 +266,7 @@ for (scenario_id in missing_scenarios) {
 
   base_params <- modifyList(frozen_base_params, scenario$overrides)
 
-  source(here("R", "run_sweep.R"), local = FALSE)
+  source(here("R", "04_run_sweep.R"), local = FALSE)
 
   dest <- batch_path(scenario_id)
   src <- here(sweep_path)

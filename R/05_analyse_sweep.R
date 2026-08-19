@@ -11,7 +11,7 @@ library(patchwork)
 ##############################################################################
 #### LOAD SWEEP OUTPUT ####
 ##############################################################################
-# Option 1: use_latest_sweep = TRUE loads the path written by run_sweep.R
+# Option 1: use_latest_sweep = TRUE loads the path written by 04_run_sweep.R
 # Option 2: use_latest_sweep = FALSE and set sweep_rds_path manually
 use_latest_sweep <- TRUE
 sweep_rds_path <- "output/sweep_results_2026-06-05-1158.rds" # used when use_latest_sweep is FALSE
@@ -25,7 +25,7 @@ if (use_latest_sweep) {
     stop(
       "use_latest_sweep is TRUE but ",
       last_path_file,
-      " not found. Run run_sweep_parallel.R first or set use_latest_sweep = FALSE and set sweep_rds_path."
+      " not found. Run 04_run_sweep.R first or set use_latest_sweep = FALSE and set sweep_rds_path."
     )
   }
   sweep_rds_path <- readLines(last_path_file, n = 1L)

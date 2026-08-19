@@ -15,7 +15,7 @@ library(dplyr)
 # Source model files (incl all function files)
 function_files <- list.files(here("R", "functions"), full.names = TRUE)
 sapply(function_files, source, .GlobalEnv)
-source(here("R", "model.R"))
+source(here("R", "00_model.R"))
 
 # Set seed for reproducibility
 # set.seed(123)
@@ -62,7 +62,7 @@ params <- list(
   truth_contribution_method = "savage_dickey" # "kl" or "savage_dickey" (study-level and, in sweep, effect-level total progress)
 )
 
-# Run simulation (edit params above for a single run; use run_sweep_parallel.R for parameter sweeps)
+# Run simulation (edit params above for a single run; use 04_run_sweep.R for parameter sweeps)
 # profvis_profile <- profvis({
 results <- run_simulation(params)
 # })

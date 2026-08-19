@@ -15,7 +15,7 @@ library(dplyr)
 # Source model files (incl all function files)
 function_files <- list.files(here("R", "functions"), full.names = TRUE)
 sapply(function_files, source, .GlobalEnv)
-source(here("R", "model.R"))
+source(here("R", "00_model.R"))
 
 # source the modified
 # source(here("R", "playing_around", "Run_studies_helpers_Felix.R"))
