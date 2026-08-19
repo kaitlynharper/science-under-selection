@@ -1,4 +1,4 @@
-This repository will hold an agent-based model of academia developed to explore the balance between original and replication research with insights from evolutionary dynamics. It is funded by the Deutsche Forschungsgemeinschaft (DFG) as part of the priority programme META-REP, which investigates replicability and reform in scientific research. See the project page here: https://gepris.dfg.de/gepris/projekt/464411255
+This repository holds an agent-based model of academia developed to explore the balance between original and replication research with insights from evolutionary dynamics. It is funded by the Deutsche Forschungsgemeinschaft (DFG) as part of the priority programme META-REP, which investigates replicability and reform in scientific research. See the project page here: https://gepris.dfg.de/gepris/projekt/464411255
 
 **Authors**
 
@@ -10,101 +10,79 @@ This repository will hold an agent-based model of academia developed to explore 
 
 ```
 ├── R/
-│   ├── model.R                    # Main simulation function
-│   ├── run_single_simulation.R    # Run a single simulation
-│   ├── run_sweep.R                # Parameter sweeps in parallel
-│   ├── analyse_single_simulation.R # Analysis and plots for a single simulation
-│   ├── analyse_sweep.R            # Analysis and plots for parameter sweep results
-│   ├── functions/                 # Core model functions
-│   │   ├── initialize_agents_matrix.R
-│   │   ├── initialize_effects_matrix.R
+│   ├── 00_model.R                      # Main simulation function (run_simulation)
+│   ├── 01_run_single_simulation.R      # Run a single simulation
+│   ├── 02_analyse_single_simulation.R  # Analysis and plots for a single simulation
+│   ├── 03_set_sweep_parameters.R       # Parameter ranges and LHS design for sweeps
+│   ├── 04_run_sweep.R                  # Parameter sweeps in parallel
+│   ├── 05_analyse_sweep.R              # Analysis and plots for parameter sweep results
+│   ├── speed_test.R                    # Timing / performance check
+│   ├── functions/                      # Core model functions
+│   │   ├── Initialize_agents_matrix.R
+│   │   ├── Initialize_effects_matrix.R
 │   │   ├── Initialize_studies_matrix.R
 │   │   ├── Add_agents.R
 │   │   ├── Run_studies.R
 │   │   ├── Run_studies_helpers.R
 │   │   ├── Publication_bias.R
-│   │   ├── Career_turnover.R
-│   │   ├── extract_belief_accuracy.R
-│   │   ├── extract_belief_accuracy2.R
-│   │   └── PB_plot.R
-│   └── playing_around/            # Preliminary/experimental scripts
-├── output/                        # Sweep results (RDS) and last_sweep_path.txt
-├── docs/                          # Manuscript and documentation (including ODD preregistration document)
-└── tests/                         # Unit tests (none yet)
+│   │   └── Career_turnover.R
+│   └── manuscript_analyses/            # Scripts and output for manuscript analyses
+│       ├── focal_parameter_sweep.R     # Focal LHS batches (sample size, PB, null rate)
+│       ├── nonfocal_robustness_sweep.R # Robustness scenarios using focal LHS batch 1
+│       ├── publication_bias_sweep.R    # Sweep of publication bias for non-significant results
+│       ├── realistic_condition_montecarlo.R  # Stochastic replicates at one realistic setting
+│       ├── PB_plot.R                   # Publication-bias logistic visualization
+│       ├── make_figures.R              # Manuscript figures (requires all results present)
+│       └── output/                     # Saved RDS and logs for the analyses above
+│           ├── focal_parameter_sweep/
+│           ├── nonfocal_robustness/
+│           ├── publication_bias_sweep/
+│           └── realistic_condition_montecarlo/
+├── output/                             # Exploratory sweep results (RDS) and last_sweep_path.txt
+├── docs/                               # Documents (including preregistration)
+└── tests/                              # Unit tests (none currently)
 ```
 
 ## Getting started
 
 ### Prerequisites
 
-- R (≥ 4.0)
-- Required packages: `here`, `dplyr`, `tidyr`, `pryr`, `profvis`, `testthat`
-- For analysis: `ggplot2`, `patchwork`, `rlang`, `scales`
-- For parameter sweeps: `lhs`, `foreach`, `doSNOW`
+R (≥ 4.0). Install packages with:
+
+```r
+install.packages(c(
+  "here", "dplyr", "tidyr", "pryr", "profvis",  # running simulations
+  "ggplot2", "patchwork", "scales",             # analysis
+  "lhs", "foreach", "doSNOW"                    # parameter sweeps
+))
+```
 
 ### Running a simulation
 
-The simplest way to run a simulation is to open and execute `R/run_single_simulation.R`, which sources all required functions, sets default parameters, and runs the model. The steps below break down what that script does:
+1. Open and run `R/01_run_single_simulation.R`. It sources the model functions, sets default parameters, and calls `run_simulation()`. Edit the `params` list in that file to change a run.
+2. With a `results` object in the environment, run `R/02_analyse_single_simulation.R` for time series and study-level plots.
 
-(1) Load packages and source all functions:
+### Running a parameter sweep
 
-```r
-library(here)
-library(pryr)
-library(profvis)
-library(tidyr)
-library(dplyr)
+1. Set which parameters to sweep, their ranges, and the number of simulations in `R/03_set_sweep_parameters.R`.
+2. Run `R/04_run_sweep.R` (it sources `03` automatically if needed). Results are saved to `output/sweep_results_<timestamp>.rds`, and the path is written to `output/last_sweep_path.txt`.
+3. Run `R/05_analyse_sweep.R` to load the latest sweep (or set a path) and produce marginal results plots and other summaries.
 
-function_files <- list.files(here("R", "functions"), full.names = TRUE)
-sapply(function_files, source, .GlobalEnv)
-source(here("R", "model.R"))
-```
+## Replicating manuscript analyses
 
-(2) Define the parameters of the simulation
+Scripts and saved output for the manuscript live in `R/manuscript_analyses/`. Each analysis writes to its own folder under `output/`. If a results file already exists, the script leaves it in place and does not re-run the simulations; delete the files in the relevant output folder if you want a fresh run. Incomplete focal batches and nonfocal scenarios are picked up on the next run.
 
-See `R/run_single_simulation.R` for the full list of available parameters. Example:
+### Analyses you can run independently
 
-```r
-params <- list(
-  # Agents and study design
-  n_agents = 1000,
-  n_timesteps = 500,
-  n_timesteps_per_career_step = 35,
-  duration_per_observation = 0.1,
-  duration_original_intercept = 1,
-  # True effects
-  n_effects = 500000,
-  base_null_probability = 0.9,
-  effect_size_mean = 0.3,
-  effect_size_variance = 0.1,
-  # Collective belief updating
-  uninformed_prior_mean = 0,
-  uninformed_prior_variance = 1,
-  # Career turnover
-  initial_selection_condition = 0,   # 0 = truth-based, 1 = novelty-based selection
-  switch_conditions_at = NA,
-  career_turnover_selection_rate = 0.5,
-  innovation_sd = 0,
-  mutation_rate = 0.1,
-  initial_replication_rate = 0.5,
-  hold_samples_constant_at = 50,
-  replications_dynamic_sample_sizes = 1,
-  publication_bias = 2,              # 0/1/2 = none / weak / strong
-  nonsig_logistic_midpoint = NA,
-  all_replications_published = 0,
-  burn_in_period = 100
-)
-```
+1. Run `focal_parameter_sweep.R` for the main LHS over sample size, publication bias (`nonsig_logistic_midpoint`), and base null probability. The first run writes `lhs_design.rds` which samples the parameter values; later runs fill missing batches and write `focal_sweep_combined.rds` once all batches are present.
+2. Run `publication_bias_sweep.R` to sweep publication bias for calibration purposes (Supplementary Material).
+3. Run `realistic_condition_montecarlo.R` for many stochastic replicates at one parameter setting (seed change only; no parameter sweep).
+4. Run `PB_plot.R` to draw the logistic publication-bias curves for the manuscript (no simulation output needed).
 
-(3) Run the simulation
+### Analyses with a prerequisite
 
-```r
-results <- run_simulation(params)
-```
+1. Run `nonfocal_robustness_sweep.R` after the focal sweep has written `lhs_design.rds`. It reuses focal batch 1 of that design and varies one non-focal setting per scenario (optimistic prior, tight prior, large effects, all replications published, strong selection, slow originals, long career window).
 
-(4) Analyze and visualize the results
+### Figures
 
-- For a single run: use `R/analyse_single_simulation.R` (expects a `results` object in the environment, e.g. from `run_single_simulation.R`).
-- For parameter sweeps: run `R/run_sweep.R` to run simulations in parallel and save output to `output/sweep_results_<timestamp>.rds`, then run `R/analyse_sweep.R` to load the latest sweep (or a chosen RDS path) and produce partial dependency plots and other summaries.
-- Additional visualisations: `R/playing_around/analysis_Felix.R`.
-
+1. Run `make_figures.R` once the other results are in place. It needs `focal_sweep_combined.rds`, the nonfocal scenario batches, and `realistic_condition_montecarlo.rds`. It uses the publication bias sweep if present, and prints some summaries.
