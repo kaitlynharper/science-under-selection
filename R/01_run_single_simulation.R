@@ -26,8 +26,8 @@ params <- list(
   n_agents = 1000, # number of agents
   n_timesteps = 500, # number of timesteps
   n_timesteps_per_career_step = 35, # number of timesteps per career phase
-  duration_per_observation = 0.1, # TODO calibration required # timesteps per observations
-  duration_original_intercept = 1, # TODO calibration required # base timesteps for original studies
+  duration_per_observation = 0.1, # timesteps per observations
+  duration_original_intercept = 1, # base timesteps for original studies
 
   # Parameters for true effects
   n_effects = 500000, # number of effects
@@ -58,7 +58,6 @@ params <- list(
 
   # Additional parameters
   burn_in_period = 100, # During burn-in, all agents run original studies only and no mutation (original-> replication or v.v.) happens
-  # TEMP: testing savage-dickey method
   truth_contribution_method = "savage_dickey" # "kl" or "savage_dickey" (study-level and, in sweep, effect-level total progress)
 )
 

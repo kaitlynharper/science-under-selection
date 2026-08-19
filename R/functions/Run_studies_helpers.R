@@ -45,7 +45,7 @@ assign_effects <- function(sim_env, verbose = FALSE) {
 
   # identify available effect_ids for original studies
 
-  # TODO DOCUMENT: Eligible effects for original studies are those that
+  # Eligible effects for original studies are those that
   # have not yet been published in completed studies and are not currently being
   # investigated in in-progress studies. The latter is a bit unrealistic
   # (as agents would need to know what effects all others are currently working on), but helps
@@ -57,7 +57,10 @@ assign_effects <- function(sim_env, verbose = FALSE) {
   )
   # max effect id = number of effects = number of rows in latest_row effect tracker
   max_effect_id <- length(sim_env$latest_row)
-  available_original_effects <- setdiff(seq_len(max_effect_id), taken_effect_ids)
+  available_original_effects <- setdiff(
+    seq_len(max_effect_id),
+    taken_effect_ids
+  )
 
   if (verbose) {
     print(paste0(
@@ -66,7 +69,7 @@ assign_effects <- function(sim_env, verbose = FALSE) {
     ))
   }
 
-  # TODO DOCUMENT: Eligible effects for replication studies are those that
+  # Eligible effects for replication studies are those that
   # have already been completed and published at least once. Then, when
   # assigning the replication effect IDs, we also consider in-progress replications
   # so that these effects are lower on the priority list for replication (currently priority only
@@ -84,11 +87,13 @@ assign_effects <- function(sim_env, verbose = FALSE) {
     sim_env$is_replication[convert_indices] <- FALSE
     sim_env$new_studies[convert_indices, "study_type"] <- 0
     if (verbose) {
-      print(paste0("Replicators switched to original studies: ", excess_replications))
+      print(paste0(
+        "Replicators switched to original studies: ",
+        excess_replications
+      ))
     }
   }
 
-  # TODO: This is a hotfix for a test (remove?)
   # In the burn-in period, all studies should be originals (=0)
   if (sim_env$timestep <= sim_env$burn_in_period) {
     sim_env$new_studies[, "study_type"] <- 0
@@ -121,7 +126,10 @@ assign_effects <- function(sim_env, verbose = FALSE) {
     sim_env$latest_row <- c(sim_env$latest_row, (old_n + 1):(old_n + n_new))
     # Recompute available original effects
     max_effect_id <- max_effect_id + n_new
-    available_original_effects <- setdiff(seq_len(max_effect_id), taken_effect_ids)
+    available_original_effects <- setdiff(
+      seq_len(max_effect_id),
+      taken_effect_ids
+    )
   }
 
   # assign effect_ids to original studies (without replacement)
@@ -164,7 +172,10 @@ prepare_information <- function(sim_env) {
       sim_env$new_studies[, "effect_id"],
       pub_orig_studies[, "effect_id"]
     )
-    sim_env$orig_estimated_mean <- pub_orig_studies[orig_match, "estimated_mean"]
+    sim_env$orig_estimated_mean <- pub_orig_studies[
+      orig_match,
+      "estimated_mean"
+    ]
     sim_env$orig_p_value <- pub_orig_studies[orig_match, "p_value"]
   }
 
@@ -174,7 +185,10 @@ prepare_information <- function(sim_env) {
   sim_env$true_means <- sim_env$effects[effect_rows, "true_effect_size"]
   sim_env$true_vars <- sim_env$effects[effect_rows, "true_effect_variance"]
   sim_env$prior_means <- sim_env$effects[effect_rows, "posterior_effect_size"]
-  sim_env$prior_vars <- sim_env$effects[effect_rows, "posterior_effect_variance"]
+  sim_env$prior_vars <- sim_env$effects[
+    effect_rows,
+    "posterior_effect_variance"
+  ]
 }
 
 #### determine_sample_sizes ####
@@ -260,7 +274,6 @@ generate_study_results <- function(sim_env) {
 
   # calculate standard error of cohen's d using Hedges–Olkin SE(d) formula
   # for equal groups where sample_sizes is n per group
-  # TODO more research on how this SE fits with our Bayesian approach
   se_obs <- sqrt(2 / sample_sizes + d_obs^2 / (4 * sample_sizes))
 
   # calculate p-values
@@ -340,7 +353,6 @@ calculate_novelty_contribution <- function(sim_env) {
 }
 
 #### calculate_truth_contribution ####
-# TEMP: testing savage-dickey method. When truth_contribution_method == "savage_dickey",
 # uses log posterior density at true effect - log prior density at true effect (point).
 calculate_truth_contribution <- function(sim_env) {
   if (sim_env$truth_contribution_method == "savage_dickey") {
@@ -402,5 +414,6 @@ update_effects_beliefs <- function(sim_env) {
   )
   old_n <- nrow(sim_env$effects)
   sim_env$effects <- rbind(sim_env$effects, new_effect_rows)
-  sim_env$latest_row[new_effect_rows[, "effect_id"]] <- (old_n + 1):(old_n + n_published)
+  sim_env$latest_row[new_effect_rows[, "effect_id"]] <- (old_n + 1):(old_n +
+    n_published)
 }

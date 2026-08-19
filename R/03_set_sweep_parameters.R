@@ -66,7 +66,6 @@ base_params <- list(
   nonsig_logistic_steepness = 3, # steepness of logistic curve for non-significant results
   all_replications_published = 0, # 0 = normal publication bias, 1 = all replications published regardless of bias
   burn_in_period = 100, # During burn-in, all agents run original studies only and no mutation
-  # TEMP: testing savage-dickey method
   truth_contribution_method = "kl" # "kl" or "savage_dickey" (study-level and effect-level total_scientific_progress)
 )
 

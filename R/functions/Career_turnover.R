@@ -24,16 +24,7 @@ career_turnover <- function(sim_env, verbose = FALSE) {
   # Filter studies to current career phase and published
   phase_start <- sim_env$timestep - sim_env$n_timesteps_per_career_step + 1
 
-  # # Under truth selection, consider all studies
-  # if (sim_env$current_selection_condition == 0) {
-  #   in_phase <- which(
-  #     !is.na(studies[, "timestep_completed"]) &
-  #       studies[, "timestep_completed"] >= phase_start &
-  #       studies[, "timestep_completed"] <= sim_env$timestep
-  #   )
-  # }
-
-  # Under truth selection, consider only published studies (testing this)
+  # Under truth selection, consider only published studies
   if (sim_env$current_selection_condition == 0) {
     in_phase <- which(
       studies[, "publication_status"] == 1 &
@@ -104,8 +95,8 @@ career_turnover <- function(sim_env, verbose = FALSE) {
 
     # apply mutation: flip replication_probability (0->1 or 1->0) with mutation_rate probability - but only after the burn-in period
     if (
-      sim_env$mutation_rate > 0 & 
-      sim_env$timestep > sim_env$burn_in_period
+      sim_env$mutation_rate > 0 &
+        sim_env$timestep > sim_env$burn_in_period
     ) {
       will_mutate <- runif(n_retire) < sim_env$mutation_rate
       new_rep_probs[will_mutate] <- 1 - new_rep_probs[will_mutate]

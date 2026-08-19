@@ -10,14 +10,12 @@ run_simulation <- function(params, verbose = 1) {
   # Create simulation environment
   sim_env <- new.env()
 
-  # TODO consider keeping the params bundled for easy export
   # Store parameters in environment
   for (param_name in names(params)) {
     sim_env[[param_name]] <- params[[param_name]]
   }
 
   # initialize the current selection condition
-  # eventually, this will be switched during the simulation if specified
   sim_env$current_selection_condition <- sim_env$initial_selection_condition
 
   #### Initialize model ####

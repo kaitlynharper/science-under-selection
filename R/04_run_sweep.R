@@ -161,7 +161,6 @@ for (sweep_topup in seq_len(max_sweep_topups)) {
       posterior_sd <- sqrt(studied_effects[, "posterior_effect_variance"])
       prior_mean <- sim_env$uninformed_prior_mean
       prior_sd <- sqrt(sim_env$uninformed_prior_variance)
-      # TEMP: testing savage-dickey method. Effect-level total progress: KL vs Savage-Dickey.
       if (params$truth_contribution_method == "savage_dickey") {
         log_prior_at_true <- stats::dnorm(
           true_mean,
