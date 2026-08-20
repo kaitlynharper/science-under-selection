@@ -320,7 +320,10 @@ make_spaghetti_marginal_plot <- function(pdp_data, outcome_label) {
       ),
       linewidth = 1.2
     ) +
-    scale_color_manual(values = scenario_palette, breaks = names(scenario_palette)) +
+    scale_color_manual(
+      values = scenario_palette,
+      breaks = names(scenario_palette)
+    ) +
     facet_wrap(~param, scales = "free_x") +
     labs(
       title = "All scenarios",
@@ -425,8 +428,16 @@ make_null_bin_heatmaps <- function(
 
   # Define the breaks for the heatmap
   heatmap_breaks <- list(
-    x = seq(param_config[[x_var]]$min, param_config[[x_var]]$max, length.out = 17),
-    y = seq(param_config[[y_var]]$min, param_config[[y_var]]$max, length.out = 17)
+    x = seq(
+      param_config[[x_var]]$min,
+      param_config[[x_var]]$max,
+      length.out = 17
+    ),
+    y = seq(
+      param_config[[y_var]]$min,
+      param_config[[y_var]]$max,
+      length.out = 17
+    )
   )
 
   # Make a panel for each base-null third
@@ -586,7 +597,8 @@ for (dataset in datasets) {
     spaghetti_row <- pdp_data
     if (outcome_var == "total_scientific_progress") {
       spaghetti_row$y <- spaghetti_row$y *
-        focal_n_timesteps / sweep_output$meta$base_params$n_timesteps
+        focal_n_timesteps /
+        sweep_output$meta$base_params$n_timesteps
     }
     spaghetti_pdp[[outcome_var]] <- rbind(
       spaghetti_pdp[[outcome_var]],
@@ -769,7 +781,12 @@ highlight_sims <- focal_for_heatmaps$results |>
   )
 
 # Mean/sd/min/max for one outcome, by null bin and combined
-summarise_highlight_region <- function(data, var, outcome_label, as_proportion = FALSE) {
+summarise_highlight_region <- function(
+  data,
+  var,
+  outcome_label,
+  as_proportion = FALSE
+) {
   vals <- if (as_proportion) 100 * data[[var]] else data[[var]]
   bind_rows(
     data |>
