@@ -2,7 +2,7 @@
 # Run simulation
 #
 # Description: This file sources the necessary files and provides code to run
-# academiABM2 simulations
+# simulations
 ##############################################################################
 
 # Load required packages

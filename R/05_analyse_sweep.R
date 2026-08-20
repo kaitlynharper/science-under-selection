@@ -1,7 +1,10 @@
-#### Analyze sweep results ####
+##############################################################################
+# Analyze sweep results
+#
 # Description: Loads sweep output (RDS with meta + results) and produces
 # partial dependency plots, scatterplots by param, and an optional three-way
 # interaction line plot. Set loading option and (if needed) path at the top.
+##############################################################################
 
 library(here)
 library(dplyr)
@@ -64,6 +67,8 @@ if (
 ##############################################################################
 #### SETUP FROM METADATA ####
 ##############################################################################
+
+# Get parameter names, labels, colors, and ranges from metadata
 param_names <- names(param_config)
 param_labels <- sapply(param_config, `[[`, "label")
 param_colors <- sapply(param_config, `[[`, "color")
@@ -117,6 +122,7 @@ outcomes <- list(
   )
 )
 
+# Function to scale outcome data to percent if needed
 scale_outcome_data <- function(data, outcome) {
   out <- data
   if (isTRUE(outcome$as_percent)) {
@@ -132,13 +138,17 @@ plot_env <- environment()
 #### PLOTS PER OUTCOME ####
 ##############################################################################
 for (outcome in outcomes) {
+  # Set outcome variable, label, and results, scale if needed
   outcome_var <- outcome$var
   outcome_label <- outcome$label
   plot_results <- scale_outcome_data(sweep_results, outcome)
   plot_norm <- scale_outcome_data(sweep_norm, outcome)
 
-  # ---- Partial dependency (all params) ----
+  # -------------------------------------------------------
+  # Partial dependency (all params)
+  # -------------------------------------------------------
   pdp_data <- data.frame()
+  # Loop through each parameter and fit a loess model
   for (i in seq_along(param_names)) {
     norm_col <- paste0(param_names[i], "_norm")
     fit <- loess(
@@ -156,7 +166,8 @@ for (outcome in outcomes) {
       )
     )
   }
-
+  
+  # Plot the partial dependency plot
   p_pdp <- ggplot(pdp_data, aes(x = x_norm, y = y, color = param)) +
     geom_line(linewidth = 1.2) +
     scale_color_manual(values = setNames(param_colors, param_labels)) +
@@ -171,7 +182,11 @@ for (outcome in outcomes) {
 
   print(p_pdp)
 
-  # ---- Individual scatterplots (one per sweep param) ----
+  # -------------------------------------------------------
+  # Individual scatterplots (one per sweep param)
+  # ------------------------------------------------------- 
+
+  # Function to make a scatterplot for a given parameter
   make_scatter <- function(i) {
     p <- ggplot(
       plot_results,
@@ -196,13 +211,27 @@ for (outcome in outcomes) {
   assign(paste0("fig_scatter_", outcome_var), p_scatters, envir = plot_env)
   print(p_scatters)
 
-  # ---- Three-way interaction line graph (optional) ----
+  # -------------------------------------------------------
+  # Three-way interaction line graph (optional)
+  # ------------------------------------------------------- 
   # Needs 3 params in the sweep so we can use one for x and two for line factors.
+  # Function to make a three-way interaction line graph
+  make_threeway <- function() {
+    p <- ggplot(
+      plot_results,
+      aes(x = .data[[threeway_x_param]], y = .data[[outcome_var]])
+    ) +
+      geom_smooth(method = "loess", se = FALSE, linewidth = 1) +
+      labs(x = x_label, y = outcome_label) +
+      theme_classic()
+  }
+  # Set parameters for the three-way interaction line graph
   threeway_params <- c(
     threeway_x_param,
     threeway_line1_param,
     threeway_line2_param
   )
+  # Check if we have at least 3 params and all three are swept
   if (length(param_names) >= 3L && all(threeway_params %in% param_names)) {
     line1_label <- param_config[[threeway_line1_param]]$label
     line2_label <- param_config[[threeway_line2_param]]$label
@@ -226,6 +255,7 @@ for (outcome in outcomes) {
 
     col1 <- plot_results[[threeway_line1_param]]
     col2 <- plot_results[[threeway_line2_param]]
+
     sweep_binned <- plot_results |>
       mutate(
         line1_level = cut(
@@ -251,6 +281,7 @@ for (outcome in outcomes) {
       ) |>
       summarise(y = mean(.data[[outcome_var]], na.rm = TRUE), .groups = "drop")
 
+    # Plot the three-way interaction line graph
     p_threeway <- ggplot(
       threeway_data,
       aes(x = x, y = y, color = line1_level, linetype = line2_level)

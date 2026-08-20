@@ -2,7 +2,12 @@
 # Publication bias helper functions
 ##########################################################################
 
-#### logistic_significant ####
+# Functions:
+# logistic_significant: publication probability for significant results (p < .05)
+# logistic_nonsignificant: publication probability for non-significant results
+# apply_publication_bias: determine which studies get published based on significance and novelty
+
+#### Function: logistic_significant ####
 # Publication probability for significant results (p < .05)
 # Uses lower asymptote to set minimum probability and logistic curve for novelty bonus
 logistic_significant <- function(
@@ -15,9 +20,9 @@ logistic_significant <- function(
     ((1 - sig_lower_asymptote) / (1 + exp(-sig_logistic_steepness * (novelty - sig_logistic_midpoint))))
 }
 
-#### logistic_nonsignificant ####
+#### Function: logistic_nonsignificant ####
 # Publication probability for non-significant results
-# Pure logistic curve from 0 to 1 based on novelty
+# Uses logistic curve from 0 to 1 based on novelty
 logistic_nonsignificant <- function(
   novelty,
   nonsig_logistic_midpoint,
@@ -26,7 +31,7 @@ logistic_nonsignificant <- function(
   1 / (1 + exp(-nonsig_logistic_steepness * (novelty - nonsig_logistic_midpoint)))
 }
 
-#### apply_publication_bias ####
+#### Function: apply_publication_bias ####
 # Determine which studies get published based on significance and novelty
 # Curve parameters come from params (sweeps override nonsig_logistic_midpoint via run_sweep merge)
 # During burn-in, publication bias is always on; after burn-in, use configured publication_bias
@@ -34,6 +39,7 @@ apply_publication_bias <- function(sim_env) {
   
   n_studies <- nrow(sim_env$new_studies)
 
+  # Determine if publication bias is currently effective based on burn-in and publication_bias parameter
   effective_pb <- if (sim_env$timestep <= sim_env$burn_in_period) {
     1
   } else {
@@ -74,6 +80,7 @@ apply_publication_bias <- function(sim_env) {
   
   # 1: all replications published; 0: replications follow regular publication bias
   if (sim_env$all_replications_published == 1) {
+    # all replications are published
     is_replication <- sim_env$new_studies[, "study_type"] == 1
     sim_env$new_studies[is_replication, "publication_status"] <- 1
   }

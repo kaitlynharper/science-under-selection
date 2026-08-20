@@ -1,23 +1,25 @@
 ##############################################################################
-# Realistic condition Monte Carlo (manuscript)
+# Realistic condition Monte Carlo (for the manuscript)
 #
 # Description: Many stochastic replicates at a single realistic parameter
 # setting (no parameter sweep). Varies only the random seed across runs.
-#
-# If a results file already exists, this script will only present the results.
-# Old results file must be deleted to run a new set of simulations.
-# Summary statistics are printed by make_figures.R.
 #
 # Output folder:
 #   R/manuscript_analyses/output/realistic_condition_montecarlo/
 #
 # Files in that folder:
-#   realistic_condition_montecarlo.rds
+#   realistic_condition_montecarlo.rds — results; skipped if the file already exists
+#
+# Workflow summary:
+#   1. If results file exists, skip (delete it to re-run)
+#   2. Otherwise: source(04_run_sweep.R) → rename output to realistic_condition_montecarlo.rds
+#   3. Summary statistics are printed by make_figures.R
 ##############################################################################
 
+# Load packages
 library(here)
 
-# Source simulation code once before parallel execution
+# Source simulation code
 function_files <- list.files(here("R", "functions"), full.names = TRUE)
 sapply(function_files, source, .GlobalEnv)
 source(here("R", "00_model.R"))
@@ -28,12 +30,14 @@ source(here("R", "00_model.R"))
 
 n_sims <- 1000L
 n_cores <- parallel::detectCores() - 1
-max_sweep_topups <- 3L
+max_sweep_topups <- 3L # re-run missing seeds if any parallel jobs fail
 
+# No parameters are swept here but 04_run_sweep.R still expects these objects in the env
 sweep_param_names <- character(0)
 param_config <- list()
 sweep_params_full <- data.frame(seed = seq_len(n_sims))
 
+# Default parameters
 base_params <- list(
   n_agents = 1000,
   n_timesteps = 1000,
@@ -69,6 +73,7 @@ base_params <- list(
 #### PATHS ####
 ##############################################################################
 
+# Output paths
 analysis_dir <- here(
   "R",
   "manuscript_analyses",
@@ -77,26 +82,26 @@ analysis_dir <- here(
 )
 results_path <- file.path(analysis_dir, "realistic_condition_montecarlo.rds")
 
-if (!dir.exists(analysis_dir)) {
-  stop(
-    "Output folder not found: ",
-    analysis_dir,
-    "\nCreate it manually before running this script."
-  )
-}
+# Create the output directory if it doesn't exist
+dir.create(analysis_dir, recursive = TRUE, showWarnings = FALSE)
 
 ##############################################################################
 #### RUN ####
 ##############################################################################
 
+# If the results file already exists, print a message
 if (file.exists(results_path)) {
   message("Results already exist: ", results_path)
 } else {
+  # Run parallel sims and save output/sweep_results_<timestamp>.rds
+  # *This is the main function that runs the simulations*
   source(here("R", "04_run_sweep.R"), local = FALSE)
 
-  src <- here(sweep_path)
-  if (!file.rename(src, results_path)) {
-    stop("Failed to move ", src, " to ", results_path)
+  # Move timestamped output to a stable file in the analysis folder
+  timestamped_output <- here(sweep_path)
+  # file.rename() is what actually moves and renames the file
+  if (!file.rename(timestamped_output, results_path)) {
+    stop("Failed to move ", timestamped_output, " to ", results_path)
   }
   message("Saved results to ", results_path)
 }

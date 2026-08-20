@@ -11,10 +11,12 @@ library(dplyr)
 library(ggplot2)
 library(patchwork)
 
+# Pull agents, studies, and effects; drop unused placeholder rows
 agents <- as.data.frame(results$agents) |> filter(!is.na(researcher_id))
 studies <- as.data.frame(results$studies) |> filter(!is.na(study_id))
 effects <- results$effects |> as.data.frame() |> filter(!is.na(effect_id))
 
+# Time axis for the two series below
 timesteps <- 0:results$n_timesteps
 n_t <- length(timesteps)
 
@@ -22,12 +24,14 @@ n_t <- length(timesteps)
 # Replicator share (%) at each timestep
 # Same quantity as 04_run_sweep.R mean_replication_rate, among agents active
 # at that timestep.
+# -------------------------------------------------------
 
 replicator_share <- data.frame(
   timestep = timesteps,
   replicator_share = numeric(n_t)
 )
 
+# Identify active agents, summarise their replication style (0 or 1) as percentage
 for (i in seq_along(timesteps)) {
   t <- timesteps[i]
   active <- !is.na(agents$timestep_active) &
@@ -41,7 +45,9 @@ for (i in seq_along(timesteps)) {
 # Total scientific progress at each timestep
 # Same definition as 04_run_sweep.R: latest posterior among effects studied
 # by that timestep, vs uninformed prior.
+# -------------------------------------------------------
 
+# Grab prior values and effects matrix
 prior_mean <- results$uninformed_prior_mean
 prior_sd <- sqrt(results$uninformed_prior_variance)
 effects_mat <- results$effects
@@ -51,6 +57,7 @@ total_scientific_progress <- data.frame(
   total_scientific_progress = numeric(n_t)
 )
 
+# For each timestep, sum progress over the latest posterior of each studied effect
 for (i in seq_along(timesteps)) {
   t <- timesteps[i]
   relevant <- effects_mat[
@@ -62,6 +69,7 @@ for (i in seq_along(timesteps)) {
     next
   }
 
+  # Keep the last update per effect, and only those that have been studied
   is_latest_update <- !duplicated(relevant[, "effect_id"], fromLast = TRUE)
   has_been_studied <- !is.na(relevant[, "study_id"])
   studied_effects <- relevant[
@@ -73,11 +81,13 @@ for (i in seq_along(timesteps)) {
     next
   }
 
+  # Grab true and posterior effect size and variance
   true_mean <- studied_effects[, "true_effect_size"]
   true_sd <- sqrt(studied_effects[, "true_effect_variance"])
   posterior_mean <- studied_effects[, "posterior_effect_size"]
   posterior_sd <- sqrt(studied_effects[, "posterior_effect_variance"])
 
+  # Savage-Dickey: log density at truth (posterior minus prior); else KL reduction
   if (results$truth_contribution_method == "savage_dickey") {
     log_prior_at_true <- stats::dnorm(
       true_mean,
@@ -105,9 +115,11 @@ for (i in seq_along(timesteps)) {
 
 # -------------------------------------------------------
 # Time markers (burn-in band and optional selection switch)
+# -------------------------------------------------------
 
 burn_in_end <- results$burn_in_period
 time_markers <- list()
+# Shaded burn-in band (if any)
 if (!is.na(burn_in_end) && burn_in_end > 0) {
   time_markers <- c(
     time_markers,
@@ -135,6 +147,7 @@ if (!is.na(burn_in_end) && burn_in_end > 0) {
     )
   )
 }
+# Dashed line at selection-condition switch (if any)
 if (!is.na(results$switch_conditions_at)) {
   time_markers <- c(
     time_markers,
@@ -148,6 +161,11 @@ if (!is.na(results$switch_conditions_at)) {
   )
 }
 
+# -------------------------------------------------------
+# Plot replicator share and total scientific progress over time
+# -------------------------------------------------------
+
+# Replicator share over time plot
 fig_replicator_share <- ggplot(
   replicator_share,
   aes(x = timestep, y = replicator_share)
@@ -158,6 +176,7 @@ fig_replicator_share <- ggplot(
   theme_classic() +
   time_markers
 
+# Total scientific progress over time plot
 fig_scientific_progress <- ggplot(
   total_scientific_progress,
   aes(x = timestep, y = total_scientific_progress)
@@ -167,17 +186,20 @@ fig_scientific_progress <- ggplot(
   theme_classic() +
   time_markers
 
+# Stack the two series
 fig_timeseries <- (fig_replicator_share / fig_scientific_progress)
 print(fig_timeseries)
 
 # -------------------------------------------------------
-# Novelty vs truth contribution (originals vs replications)
+# Plot novelty vs truth contribution (originals vs replications)
+# -------------------------------------------------------
 
 # as effects are stored multiple times, we reduce it to a single row per effect
 # (we just want the true effect size, not the evolution)
 effects_reduced <- effects |> select(effect_id, true_effect_size) |> distinct()
 S2 <- left_join(studies, effects_reduced, by = "effect_id")
 
+# Labels for study type, null vs non-null, and publication status
 S2$study_type_label <- factor(
   S2$study_type,
   levels = c(0, 1),
@@ -194,6 +216,7 @@ S2$publication_status_label <- factor(
   labels = c("unpublished", "published")
 )
 
+# Flag replications whose novelty exceeds the highest original
 highest_original_novelty <- max(
   S2$novelty_contribution[S2$study_type == 0],
   na.rm = TRUE
@@ -201,6 +224,7 @@ highest_original_novelty <- max(
 S2 <- S2 |>
   mutate(higher_repl_novelty = novelty_contribution > highest_original_novelty)
 
+# Scatter of novelty vs truth contribution, split by truth, type, and publication
 print(
   ggplot(
     S2,

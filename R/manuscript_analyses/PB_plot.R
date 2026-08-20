@@ -1,63 +1,115 @@
-##########################################################################
-# Visualize the logistic functions for publication bias
-##########################################################################
+##############################################################################
+# Publication-bias logistic visualization (for the manuscript)
+#
+# Description: Draw the logistic publication-probability curves used in the
+# model. No simulation output is needed.
+#
+# Figures:
+#   plot_PB() function      — one configuration of all five PB parameters
+#   method_pb_figure_plot   — methods figure: significant curve plus the
+#                             family of non-significant curves across the
+#                             swept midpoint range
+#
+# Defaults match base_params in the manuscript analysis scripts.
+##############################################################################
 
-# Source helper functions (logistic_significant, logistic_nonsignificant)
-source(here::here("R", "functions", "Publication_bias.R"))
+# Load packages
+library(here)
 library(ggplot2)
 
-#' @param sig_lower_asymptote lower asymptote (minimum publication probability) for p < .05 results
-#' @param sig_logistic_midpoint novelty midpoint for significant results
-#' @param sig_logistic_steepness steepness of logistic curve for significant results
-#' @param nonsig_logistic_midpoint novelty midpoint for non-significant results
-#' @param nonsig_logistic_steepness steepness of logistic curve for non-significant
+# Source publication bias functions
+source(here("R", "functions", "Publication_bias.R"))
 
-plot_PB <- function(
+##############################################################################
+#### DEFAULTS ####
+##############################################################################
+
+# Curve parameters (match base_params defaults)
+pb_defaults <- list(
+  sig_lower_asymptote = 0,
+  sig_logistic_midpoint = -0.5,
+  sig_logistic_steepness = 3,
+  nonsig_logistic_midpoint = 3,
+  nonsig_logistic_steepness = 3
+)
+
+# Midpoints shown in the methods figure 
+method_nonsig_midpoints <- seq(-0.5, 3, 0.5)
+
+##############################################################################
+#### HELPERS ####
+##############################################################################
+
+# Data for the significant curve and one or more non-significant curves
+pb_curve_data <- function(
   sig_lower_asymptote,
   sig_logistic_midpoint,
   sig_logistic_steepness,
   nonsig_logistic_midpoint,
   nonsig_logistic_steepness,
   max_novelty = 5,
-  subtitle = NA
+  novelty_step = 0.01
 ) {
-  novelty_range <- seq(0, max_novelty, by = 0.01)
+  novelty <- seq(0, max_novelty, by = novelty_step)
 
-  viz_data <- data.frame(
-    novelty = rep(novelty_range, 2),
-    publication_prob = c(
-      logistic_significant(
-        novelty_range,
-        sig_lower_asymptote,
-        sig_logistic_midpoint,
-        sig_logistic_steepness
-      ),
-      logistic_nonsignificant(
-        novelty_range,
-        nonsig_logistic_midpoint,
-        nonsig_logistic_steepness
-      )
+  # Significant curve
+  sig <- data.frame(
+    novelty = novelty,
+    publication_prob = logistic_significant(
+      novelty,
+      sig_lower_asymptote,
+      sig_logistic_midpoint,
+      sig_logistic_steepness
     ),
-    result_type = rep(
-      c("Significant", "Non-significant"),
-      each = length(novelty_range)
-    )
+    result_type = "Significant",
+    curve_id = "Significant"
   )
 
-  pub_prob <- ggplot(
-    viz_data,
-    aes(x = novelty, y = publication_prob, linetype = result_type)
+  # Non-significant curves
+  nonsig <- expand.grid(
+    novelty = novelty,
+    midpoint = nonsig_logistic_midpoint,
+    KEEP.OUT.ATTRS = FALSE,
+    stringsAsFactors = FALSE
+  )
+  nonsig$publication_prob <- logistic_nonsignificant(
+    nonsig$novelty,
+    nonsig$midpoint,
+    nonsig_logistic_steepness
+  )
+  nonsig$result_type <- "Non-significant"
+  nonsig$curve_id <- as.character(nonsig$midpoint)
+  nonsig$midpoint <- NULL
+
+  # Combine significant and non-significant curves
+  rbind(sig, nonsig)
+}
+
+# Helper function to plot the publication bias curves
+pb_curve_ggplot <- function(
+  data,
+  max_novelty,
+  title = NULL,
+  subtitle = NULL,
+  linewidth = 1
+) {
+  # Plot the publication bias curves
+  ggplot(
+    data,
+    aes(x = novelty, y = publication_prob, linetype = result_type, group = curve_id)
   ) +
-    geom_line(color = "black", linewidth = 1.2) +
+    geom_line(color = "black", linewidth = linewidth) +
     scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
-    scale_linetype_manual(values = c("dotted", "solid")) +
     scale_x_continuous(limits = c(0, max_novelty)) +
+    scale_linetype_manual(
+      values = c("Significant" = "solid", "Non-significant" = "dotted")
+    ) +
     labs(
-      title = "Publication Probability by Novelty and Significance",
+      title = title,
       subtitle = subtitle,
       x = "Novelty",
       y = "Publication Probability",
-      linetype = NULL
+      linetype = "Result type"
     ) +
     theme_classic() +
     theme(
@@ -65,74 +117,63 @@ plot_PB <- function(
       plot.title = element_text(hjust = 0.5),
       plot.subtitle = element_text(hjust = 0.5)
     )
-
-  pub_prob
 }
 
-# Fixed curve parameters (match updated defaults in base_params)
-sig_lower_asymptote <- 0
-sig_logistic_midpoint <- -0.5
-sig_logistic_steepness <- 3
-nonsig_logistic_steepness <- 3
+##############################################################################
+#### SINGLE CONFIGURATION ####
+##############################################################################
 
-# Single parameter set (uncomment to play around):
-# plot_PB(
-#   sig_lower_asymptote = sig_lower_asymptote,
-#   sig_logistic_midpoint = sig_logistic_midpoint,
-#   sig_logistic_steepness = sig_logistic_steepness,
-#   nonsig_logistic_midpoint = 2,
-#   nonsig_logistic_steepness = nonsig_logistic_steepness
-# )
-
-# Method PB figure: sig curve + nonsig curves across nonsig_logistic_midpoint range
-nonsig_logistic_midpoints <- seq(-0.5, 3, 0.5)
-novelty_range <- seq(0, 3, by = 0.01)
-
-method_pb_figure_data <- expand.grid(
-  novelty = novelty_range,
-  midpoint = nonsig_logistic_midpoints
-)
-method_pb_figure_data$publication_prob <- with(
-  method_pb_figure_data,
-  logistic_nonsignificant(novelty, midpoint, nonsig_logistic_steepness)
-)
-method_pb_figure_data$type <- "Non-significant"
-method_pb_figure_data$curve_id <- as.character(method_pb_figure_data$midpoint)
-
-sig_data <- data.frame(
-  novelty = novelty_range,
-  midpoint = NA_real_,
-  publication_prob = logistic_significant(
-    novelty_range,
+# One significant curve and one non-significant curve.
+# Change any argument to try a different PB setting; defaults match base_params.
+plot_PB <- function(
+  sig_lower_asymptote = pb_defaults$sig_lower_asymptote,
+  sig_logistic_midpoint = pb_defaults$sig_logistic_midpoint,
+  sig_logistic_steepness = pb_defaults$sig_logistic_steepness,
+  nonsig_logistic_midpoint = pb_defaults$nonsig_logistic_midpoint,
+  nonsig_logistic_steepness = pb_defaults$nonsig_logistic_steepness,
+  max_novelty = 5,
+  subtitle = NULL
+) {
+  data <- pb_curve_data(
     sig_lower_asymptote,
     sig_logistic_midpoint,
-    sig_logistic_steepness
-  ),
-  type = "Significant",
-  curve_id = "Significant"
-)
-
-method_pb_figure_data <- rbind(sig_data, method_pb_figure_data)
-
-method_pb_figure_plot <- ggplot(
-  method_pb_figure_data,
-  aes(x = novelty, y = publication_prob, linetype = type, group = curve_id)
-) +
-  geom_line(color = "black", linewidth = 1) +
-  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
-  scale_x_continuous(limits = c(0, 3)) +
-  scale_linetype_manual(
-    values = c("Significant" = "solid", "Non-significant" = "dotted")
-  ) +
-  labs(
-    title = "",
-    x = "Novelty",
-    y = "Publication Probability",
-    linetype = "Result type"
-  ) +
-  theme_classic() +
-  theme(
-    legend.position = "bottom",
-    plot.title = element_text(hjust = 0.5),
-    plot.subtitle = element_text(hjust = 0.5)
+    sig_logistic_steepness,
+    nonsig_logistic_midpoint,
+    nonsig_logistic_steepness,
+    max_novelty = max_novelty
   )
+  pb_curve_ggplot(
+    data,
+    max_novelty = max_novelty,
+    title = "Publication Probability by Novelty and Significance",
+    subtitle = subtitle,
+    linewidth = 1.2
+  )
+}
+
+##############################################################################
+#### METHODS FIGURE ####
+##############################################################################
+
+# Significant curve plus a family of non-significant curves across midpoints
+plot_PB_method <- function(
+  sig_lower_asymptote = pb_defaults$sig_lower_asymptote,
+  sig_logistic_midpoint = pb_defaults$sig_logistic_midpoint,
+  sig_logistic_steepness = pb_defaults$sig_logistic_steepness,
+  nonsig_logistic_midpoints = method_nonsig_midpoints,
+  nonsig_logistic_steepness = pb_defaults$nonsig_logistic_steepness,
+  max_novelty = 3
+) {
+  data <- pb_curve_data(
+    sig_lower_asymptote,
+    sig_logistic_midpoint,
+    sig_logistic_steepness,
+    nonsig_logistic_midpoints,
+    nonsig_logistic_steepness,
+    max_novelty = max_novelty
+  )
+  pb_curve_ggplot(data, max_novelty = max_novelty)
+}
+
+method_pb_figure_plot <- plot_PB_method()
+method_pb_figure_plot

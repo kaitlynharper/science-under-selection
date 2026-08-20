@@ -1,3 +1,7 @@
+##########################################################################
+# Add agents
+##########################################################################
+
 #### Function: add_agents ####
 
 add_agents <- function(
@@ -9,6 +13,7 @@ add_agents <- function(
   timestep_next_papers
 ) {
   
+  # Check if no agents to add
   if (n_agents == 0) {
     warning("n_agents = 0; no agents to add. Skipping add_agents().")
     return()
@@ -23,12 +28,13 @@ add_agents <- function(
   }
   researcher_ids <- next_agent_id:(next_agent_id + n_agents - 1)
   
-  # Set timestep_inactive (NA for active agents)
-  timesteps_inactive <- rep(NA, n_agents)
-  
-  # Set timestep_active (all agents have same entry timestep)
+  # Set timestep_active
   timesteps_active <- rep(timestep_active, n_agents)
 
+    # Set timestep_inactive (NA for new active agents)
+  timesteps_inactive <- rep(NA, n_agents)
+
+  # Create new agents matrix
   new_agents <- cbind(
     researcher_id = researcher_ids,
     replication_probability = replication_probabilities,
@@ -37,5 +43,6 @@ add_agents <- function(
     timestep_inactive = timesteps_inactive,
     timestep_next_paper = timestep_next_papers
   )
+  # Add new agents to the existingagents matrix
   sim_env$agents <- rbind(sim_env$agents, new_agents)
 }

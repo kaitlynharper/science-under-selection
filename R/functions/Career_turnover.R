@@ -1,11 +1,9 @@
 ##########################################################################
-# Career turnover function
+# Career turnover
 ##########################################################################
 
+#### Function: career_turnover ####
 career_turnover <- function(sim_env, verbose = FALSE) {
-  # create a local copy of the non-empty studies to speed up selection
-  studies <- sim_env$studies[!is.na(sim_env$studies[, "study_id"]), ]
-
   #### Find active agents ####
   active_indices <- which(
     !is.na(sim_env$agents[, "researcher_id"]) &
@@ -23,43 +21,30 @@ career_turnover <- function(sim_env, verbose = FALSE) {
 
   # Filter studies to current career phase and published
   phase_start <- sim_env$timestep - sim_env$n_timesteps_per_career_step + 1
-
-  # Under truth selection, consider only published studies
-  if (sim_env$current_selection_condition == 0) {
-    in_phase <- which(
-      studies[, "publication_status"] == 1 &
-        !is.na(studies[, "timestep_completed"]) &
-        studies[, "timestep_completed"] >= phase_start &
-        studies[, "timestep_completed"] <= sim_env$timestep
-    )
-  }
-
-  # Under novelty selection, only consider published studies
-  if (sim_env$current_selection_condition == 1) {
-    in_phase <- which(
-      studies[, "publication_status"] == 1 &
-        !is.na(studies[, "timestep_completed"]) &
-        studies[, "timestep_completed"] >= phase_start &
-        studies[, "timestep_completed"] <= sim_env$timestep
-    )
-  }
+  in_phase <- which(
+    sim_env$studies[, "publication_status"] == 1 &
+      !is.na(sim_env$studies[, "timestep_completed"]) &
+      sim_env$studies[, "timestep_completed"] >= phase_start &
+      sim_env$studies[, "timestep_completed"] <= sim_env$timestep
+  )
 
   # Sum contributions by researcher_id using rowsum
   contribution_sums <- rowsum(
-    studies[in_phase, contribution_column, drop = FALSE],
-    studies[in_phase, "researcher_id"]
+    sim_env$studies[in_phase, contribution_column, drop = FALSE],
+    sim_env$studies[in_phase, "researcher_id"]
   )
 
-  # Match contributions to active agents (agents with no studies get 0)
+  # Match contributions to active agents 
   active_researcher_ids <- sim_env$agents[active_indices, "researcher_id"]
   career_contribution <- contribution_sums[
     match(active_researcher_ids, rownames(contribution_sums)),
     1
   ]
+  # Set contributions to 0 for agents with no studies
   career_contribution[is.na(career_contribution)] <- 0
 
   #### Identify bottom % of agents based on career_contribution ####
-  # Rank agents by career_contribution (with random ties)
+  # Rank agents by career_contribution (with random tie breaks)
   ranks <- rank(career_contribution, ties.method = "random")
   # Identify the cutoff rank according to career_turnover_selection_rate
   n_retire <- floor(n_active * sim_env$career_turnover_selection_rate)
@@ -71,6 +56,8 @@ career_turnover <- function(sim_env, verbose = FALSE) {
   sim_env$agents[retire_indices, "timestep_inactive"] <- sim_env$timestep
 
   #### Replace retired agents with new agents ####
+
+  # Grab the indices of the surviving agents
   surviving_indices <- active_indices[-which_to_retire]
 
   if (verbose) {
@@ -102,6 +89,7 @@ career_turnover <- function(sim_env, verbose = FALSE) {
       new_rep_probs[will_mutate] <- 1 - new_rep_probs[will_mutate]
     }
 
+    # sample new target powers from the surviving agents
     new_powers <- sample(
       sim_env$agents[surviving_indices, "target_power"],
       n_retire,
@@ -110,6 +98,7 @@ career_turnover <- function(sim_env, verbose = FALSE) {
       rnorm(n_retire, 0, sim_env$innovation_sd)
     new_powers <- pmax(0.01, pmin(0.99, new_powers)) # ensure powers are between 0.01 and 0.99
 
+    # add the new agents to the simulation environment
     add_agents(
       sim_env = sim_env,
       n_agents = n_retire,

@@ -1,3 +1,7 @@
+##########################################################################
+# Initialize agents matrix
+##########################################################################
+
 #### Function: initialize_agents_matrix ####
 
 initialize_agents_matrix <- function(sim_env) {

@@ -1,22 +1,25 @@
 ##############################################################################
-# Make figures (manuscript)
+# Make figures (for the manuscript)
 #
-# Description: Marginal effects and scatterplots for focal sweep and each
-# nonfocal robustness scenario, plus spaghetti marginal overlays (one per
-# outcome, all scenarios on the same axes). Optional focal batch-stability
-# diagnostics overlay per-batch marginal fits with the pooled-all-sims line.
-# Plot objects are assigned in this script's environment and printed at the end.
+# Description: Plots for the manuscript and supplementary material.
 # Highlighted-region and realistic-condition Monte Carlo summaries print after
-# the figures. Manuscript inline values are assigned as:
-#   manuscript_stochastic_variability (n_replicates, mean_pct, sd_pct, se_pct, two_se_pct)
-#   manuscript_highlight_replication (mean_pct_033_066, mean_pct_066_1)
-#   manuscript_highlight_published_are_replications (mean_pct_033_066, mean_pct_066_1)
-#   manuscript_highlight_success_prepub (mean_pct_033_066, mean_pct_066_1)
-#   manuscript_highlight_success_postpub (mean_pct_033_066, mean_pct_066_1)
-#   manuscript_format_pct()
+# the figures. Plot objects are assigned in this script's environment and
+# printed at the end.
 #
-# Figures produced (object names):
+# Input folders (run the corresponding simulations first):
+#   R/manuscript_analyses/output/focal_parameter_sweep/
+#   R/manuscript_analyses/output/nonfocal_robustness/
+#   R/manuscript_analyses/output/publication_bias_sweep/
+#   R/manuscript_analyses/output/realistic_condition_montecarlo/
 #
+# Workflow summary:
+#   1. Load focal combined + nonfocal scenario batches; build marginal, scatter,
+#      heatmap, spaghetti, and batch-stability plots
+#   2. Load publication-bias sweep; build publication-composition figure
+#   3. Print figures, then highlighted-region and Monte Carlo summaries
+#   4. Assign manuscript inline values
+#
+# Figures produced:
 # Main manuscript (focal sweep):
 #   fig_marginal_focal_mean_replication_rate
 #   fig_marginal_focal_total_scientific_progress
@@ -24,47 +27,37 @@
 #   fig_scatter_focal_total_scientific_progress
 #   fig_heatmap_null_bins_mean_replication_rate
 #   fig_heatmap_null_bins_total_scientific_progress
-#
 # Publication bias:
 #   fig_publication_composition
-#
 # Stability results:
 #   fig_focal_batch_stability_mean_replication_rate
 #   fig_focal_batch_stability_total_scientific_progress
-#
-# Sensitivity scenarios:
+# Sensitivity scenarios (where *scenario_label* is the name of the scenario):
 #   fig_spaghetti_marginal_mean_replication_rate
 #   fig_spaghetti_marginal_total_scientific_progress
-#   fig_marginal_optimistic_prior_mean_replication_rate
-#   fig_marginal_optimistic_prior_total_scientific_progress
-#   fig_scatter_optimistic_prior_mean_replication_rate
-#   fig_scatter_optimistic_prior_total_scientific_progress
-#   fig_marginal_tight_prior_mean_replication_rate
-#   fig_marginal_tight_prior_total_scientific_progress
-#   fig_scatter_tight_prior_mean_replication_rate
-#   fig_scatter_tight_prior_total_scientific_progress
-#   fig_marginal_large_effects_mean_replication_rate
-#   fig_marginal_large_effects_total_scientific_progress
-#   fig_scatter_large_effects_mean_replication_rate
-#   fig_scatter_large_effects_total_scientific_progress
-#   fig_marginal_all_reps_published_mean_replication_rate
-#   fig_marginal_all_reps_published_total_scientific_progress
-#   fig_scatter_all_reps_published_mean_replication_rate
-#   fig_scatter_all_reps_published_total_scientific_progress
-#   fig_marginal_strong_selection_mean_replication_rate
-#   fig_marginal_strong_selection_total_scientific_progress
-#   fig_scatter_strong_selection_mean_replication_rate
-#   fig_scatter_strong_selection_total_scientific_progress
-#   fig_marginal_slow_originals_mean_replication_rate
-#   fig_marginal_slow_originals_total_scientific_progress
-#   fig_scatter_slow_originals_mean_replication_rate
-#   fig_scatter_slow_originals_total_scientific_progress
-#   fig_marginal_long_career_window_mean_replication_rate
-#   fig_marginal_long_career_window_total_scientific_progress
-#   fig_scatter_long_career_window_mean_replication_rate
-#   fig_scatter_long_career_window_total_scientific_progress
+#   fig_marginal_*scenario_label*_mean_replication_rate
+#   fig_marginal_*scenario_label*_total_scientific_progress
+#   fig_scatter_*scenario_label*_mean_replication_rate
+#   fig_scatter_*scenario_label*_total_scientific_progress
+# Available scenario labels:
+#   optimistic_prior
+#   tight_prior
+#   large_effects
+#   all_reps_published
+#   strong_selection
+#   slow_originals
+#   long_career_window
+#
+# Manuscript inline values:
+#   manuscript_stochastic_variability (n_replicates, mean_pct, sd_pct, se_pct, two_se_pct)
+#   manuscript_highlight_replication (mean_pct_033_066, mean_pct_066_1)
+#   manuscript_highlight_published_are_replications (mean_pct_033_066, mean_pct_066_1)
+#   manuscript_highlight_success_prepub (mean_pct_033_066, mean_pct_066_1)
+#   manuscript_highlight_success_postpub (mean_pct_033_066, mean_pct_066_1)
+#   manuscript_format_pct()
 ##############################################################################
 
+# Load packages
 library(here)
 library(dplyr)
 library(tidyr)
@@ -72,21 +65,44 @@ library(ggplot2)
 library(patchwork)
 library(scales)
 
-source(here("R", "functions", "Run_studies_helpers.R"))
+##############################################################################
+#### SETUP ####
+##############################################################################
 
+# Use the current script environment so figures are available after source()
 plot_env <- environment()
 
+# Define outcome variables and axis labels
 outcomes <- list(
   list(var = "mean_replication_rate", label = "Replicator share (%)"),
   list(var = "total_scientific_progress", label = "Total scientific progress")
 )
 
+# Define realistic condition parameters for the highlighted regions
 highlight_region <- list(
   null_bins = c("0.33-0.66", "0.66-1"),
   sample_size = c(20, 40),
   nonsig_logistic_midpoint = c(2, 3)
 )
 
+# Define colours for spaghetti overlays (one colour per scenario)
+scenario_palette <- c(
+  "Focal sweep" = "black",
+  "Optimistic prior" = "#0072B2",
+  "Tight prior" = "#D55E00",
+  "Large effects" = "#009E73",
+  "All replications published" = "#CC79A7",
+  "Strong selection" = "#E69F00",
+  "Slow originals" = "#56B4E9",
+  "Long career window" = "#7B4F9E"
+)
+focal_scenario_label <- "Focal sweep"
+
+##############################################################################
+#### PATHS ####
+##############################################################################
+
+# Focal sweep (combined file + optional per-batch files for stability plots)
 focal_dir <- here(
   "R",
   "manuscript_analyses",
@@ -94,6 +110,8 @@ focal_dir <- here(
   "focal_parameter_sweep"
 )
 focal_path <- file.path(focal_dir, "focal_sweep_combined.rds")
+
+# Nonfocal robustness scenarios (one batch file per scenario)
 nonfocal_dir <- here(
   "R",
   "manuscript_analyses",
@@ -101,6 +119,25 @@ nonfocal_dir <- here(
   "nonfocal_robustness"
 )
 
+# Publication-bias sweep
+publication_bias_path <- here(
+  "R",
+  "manuscript_analyses",
+  "output",
+  "publication_bias_sweep",
+  "publication_bias_sweep.rds"
+)
+
+# Realistic-condition Monte Carlo
+realistic_montecarlo_path <- here(
+  "R",
+  "manuscript_analyses",
+  "output",
+  "realistic_condition_montecarlo",
+  "realistic_condition_montecarlo.rds"
+)
+
+# Require the combined focal file and at least one nonfocal scenario batch
 if (!file.exists(focal_path)) {
   stop("Focal sweep not found: ", focal_path)
 }
@@ -120,6 +157,7 @@ if (length(nonfocal_batch_files) == 0L) {
   stop("No nonfocal scenario batch files in ", nonfocal_dir)
 }
 
+# Dataset list: focal combined, then one entry per nonfocal scenario batch
 datasets <- c(
   list(list(id = "focal", path = focal_path)),
   lapply(nonfocal_batch_files, function(path) {
@@ -130,18 +168,11 @@ datasets <- c(
   })
 )
 
-scenario_palette <- c(
-  "Focal sweep" = "black",
-  "Optimistic prior" = "#0072B2",
-  "Tight prior" = "#D55E00",
-  "Large effects" = "#009E73",
-  "All replications published" = "#CC79A7",
-  "Strong selection" = "#E69F00",
-  "Slow originals" = "#56B4E9",
-  "Long career window" = "#7B4F9E"
-)
-focal_scenario_label <- "Focal sweep"
+##############################################################################
+#### HELPERS ####
+##############################################################################
 
+# Map a 0-1 grid back onto a parameter's original range (log if needed)
 denorm_param_grid <- function(x_norm, spec) {
   if (isTRUE(spec$log_scale)) {
     log_min <- log(spec$min)
@@ -152,6 +183,7 @@ denorm_param_grid <- function(x_norm, spec) {
   }
 }
 
+# Partial-dependence (loess) curves, one per swept parameter
 marginal_pdp_data <- function(
   sweep_results,
   param_config,
@@ -162,6 +194,7 @@ marginal_pdp_data <- function(
   param_labels <- vapply(param_config, `[[`, character(1L), "label")
   param_ranges <- lapply(param_config, function(x) c(x$min, x$max))
 
+  # Normalize each swept parameter to [0, 1] for marginal plots
   sweep_norm <- sweep_results
   for (i in seq_along(param_names)) {
     r <- param_ranges[[i]]
@@ -169,6 +202,7 @@ marginal_pdp_data <- function(
       (sweep_results[[param_names[i]]] - r[1]) / (r[2] - r[1])
   }
 
+  # Fit a loess on the normalized axis, then map the grid back to original units
   pdp_data <- data.frame()
   for (i in seq_along(param_names)) {
     norm_col <- paste0(param_names[i], "_norm")
@@ -195,6 +229,7 @@ marginal_pdp_data <- function(
   pdp_data
 }
 
+# Function: make a combined marginal plot (all params, x-axis normalized)
 make_marginal_plot <- function(pdp_data, param_config, outcome_label, title) {
   param_labels <- vapply(param_config, `[[`, character(1L), "label")
   param_colors <- vapply(param_config, `[[`, character(1L), "color")
@@ -212,6 +247,7 @@ make_marginal_plot <- function(pdp_data, param_config, outcome_label, title) {
     theme(legend.position = "bottom")
 }
 
+# Function: make a scatterplot, one panel per parameter
 make_scatter_plot <- function(
   sweep_results,
   param_config,
@@ -224,6 +260,7 @@ make_scatter_plot <- function(
   param_colors <- vapply(param_config, `[[`, character(1L), "color")
   n_params <- length(param_names)
 
+  # Convert replicator share to percent for plotting
   plot_results <- sweep_results
   if (outcome_var == "mean_replication_rate") {
     plot_results[[outcome_var]] <- 100 * plot_results[[outcome_var]]
@@ -249,15 +286,19 @@ make_scatter_plot <- function(
     plot_annotation(title = title)
 }
 
+# Overlay all scenarios' marginals on the original (denormalized) x-axis
 make_spaghetti_marginal_plot <- function(pdp_data, outcome_label) {
   scenario_levels <- names(scenario_palette)[
     names(scenario_palette) %in% unique(pdp_data$dataset)
   ]
   plot_data <- pdp_data |>
     mutate(dataset = factor(dataset, levels = scenario_levels))
+
+  # Draw non-focal scenarios first so the focal line sits on top
   pdp_other <- plot_data |> filter(dataset != focal_scenario_label)
   pdp_focal <- plot_data |> filter(dataset == focal_scenario_label)
 
+  # Plot the spaghetti marginal plot
   ggplot() +
     geom_line(
       data = pdp_other,
@@ -291,6 +332,7 @@ make_spaghetti_marginal_plot <- function(pdp_data, outcome_label) {
     theme(legend.position = "bottom")
 }
 
+# Per-batch marginals vs pooled-all-sims line (focal sweep only)
 make_focal_batch_stability_plot <- function(
   batch_pdp,
   pooled_pdp,
@@ -325,18 +367,196 @@ make_focal_batch_stability_plot <- function(
     theme_classic() +
     theme(legend.position = "bottom")
 
+  # Hide the batch legend when there are too many batches to read
   if (n_batches > 6L) {
     p <- p + guides(color = "none")
   }
   p
 }
 
+# Function: make a heatmap of sample size × publication bias, one panel per base-null third
+make_null_bin_heatmaps <- function(
+  sweep_results,
+  param_config,
+  outcome_var,
+  outcome_label,
+  title,
+  highlight_region = NULL
+) {
+  x_var <- "nonsig_logistic_midpoint"
+  y_var <- "hold_samples_constant_at"
+  null_labels <- c("0-0.33", "0.33-0.66", "0.66-1")
+
+  # Bin simulations into thirds of base null probability
+  plot_data <- sweep_results |>
+    mutate(
+      null_bin = cut(
+        base_null_probability,
+        breaks = c(0, 1 / 3, 2 / 3, 1),
+        labels = null_labels,
+        include.lowest = TRUE
+      )
+    ) |>
+    filter(!is.na(null_bin), !is.na(.data[[outcome_var]]))
+
+  # Convert replicator share to percent for the fill scale
+  if (outcome_var == "mean_replication_rate") {
+    plot_data[[outcome_var]] <- 100 * plot_data[[outcome_var]]
+  }
+
+  # Red rectangle marks the highlighted region on the relevant panels
+  highlight_df <- if (is.null(highlight_region)) {
+    NULL
+  } else {
+    data.frame(
+      null_bin = highlight_region$null_bins,
+      xmin = min(highlight_region$nonsig_logistic_midpoint),
+      xmax = max(highlight_region$nonsig_logistic_midpoint),
+      ymin = min(highlight_region$sample_size),
+      ymax = max(highlight_region$sample_size)
+    )
+  }
+
+  fill_limits <- if (outcome_var == "mean_replication_rate") {
+    c(0, 100)
+  } else {
+    range(plot_data[[outcome_var]], na.rm = TRUE)
+  }
+
+  # Define the breaks for the heatmap
+  heatmap_breaks <- list(
+    x = seq(param_config[[x_var]]$min, param_config[[x_var]]$max, length.out = 17),
+    y = seq(param_config[[y_var]]$min, param_config[[y_var]]$max, length.out = 17)
+  )
+
+  # Make a panel for each base-null third
+  panels <- lapply(null_labels, function(lbl) {
+    panel_plot <- ggplot(
+      filter(plot_data, null_bin == lbl),
+      aes(
+        x = .data[[x_var]],
+        y = .data[[y_var]],
+        z = .data[[outcome_var]]
+      )
+    ) +
+      stat_summary_2d(
+        fun = function(z) mean(z, na.rm = TRUE),
+        breaks = heatmap_breaks
+      ) +
+      coord_cartesian(expand = FALSE) +
+      scale_fill_viridis_c(
+        option = "D",
+        limits = fill_limits,
+        oob = scales::squish
+      ) +
+      labs(
+        title = paste("Base null:", lbl),
+        x = param_config[[x_var]]$label,
+        y = param_config[[y_var]]$label,
+        fill = outcome_label
+      ) +
+      theme_classic()
+
+    panel_highlight <- if (is.null(highlight_df)) {
+      NULL
+    } else {
+      filter(highlight_df, null_bin == lbl)
+    }
+
+    # Add a red rectangle to the panel if the highlighted region is defined
+    if (!is.null(panel_highlight) && nrow(panel_highlight) > 0L) {
+      panel_plot <- panel_plot +
+        geom_rect(
+          data = panel_highlight,
+          aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+          inherit.aes = FALSE,
+          color = "red",
+          fill = NA,
+          linewidth = 0.8,
+          linetype = "solid"
+        )
+    }
+
+    panel_plot
+  })
+
+  wrap_plots(panels, ncol = 3, guides = "collect") +
+    plot_annotation(title = title) &
+    theme(legend.position = "bottom")
+}
+
+# Function: make a plot of published-literature composition vs publication-bias parameter
+make_publication_composition_plot <- function(sweep_results) {
+  composition_vars <- c(
+    pct_published_originals_sig = "Published originals that are significant",
+    pct_published_replications_sig = "Published replications that are significant",
+    pct_published_are_replications = "Published studies that are replications"
+  )
+
+  # Check that the publication bias sweep results have the required columns
+  missing_vars <- setdiff(names(composition_vars), names(sweep_results))
+  if (length(missing_vars) > 0L) {
+    stop(
+      "Publication bias sweep is missing outcome columns: ",
+      paste(missing_vars, collapse = ", "),
+      "\nRe-run R/manuscript_analyses/publication_bias_sweep.R ",
+      "(delete publication_bias_sweep.rds first if it exists but is empty)."
+    )
+  }
+  if (nrow(sweep_results) == 0L) {
+    stop(
+      "Publication bias sweep has no rows. ",
+      "Re-run publication_bias_sweep.R after fixing base_params."
+    )
+  }
+
+  # Pivot the publication bias sweep results to long format
+  plot_data <- sweep_results |>
+    pivot_longer(
+      cols = all_of(names(composition_vars)),
+      names_to = "metric",
+      values_to = "pct"
+    ) |>
+    mutate(metric = composition_vars[metric])
+
+  # Plot the publication composition plot
+  ggplot(
+    plot_data,
+    aes(x = nonsig_logistic_midpoint, y = pct, color = metric)
+  ) +
+    geom_hline(yintercept = c(1, 96), linetype = "dotted", color = "black") +
+    geom_point(alpha = 0.25, size = 1.2) +
+    geom_smooth(method = "loess", se = FALSE, linewidth = 1.1, span = 0.75) +
+    scale_color_manual(
+      values = c(
+        "#0072B2",
+        "#D55E00",
+        "#009E73"
+      )
+    ) +
+    labs(
+      title = "Published literature composition vs publication bias",
+      x = "Publication bias parameter",
+      y = "Percent of studies",
+      color = NULL
+    ) +
+    scale_y_continuous(limits = c(0, 100)) +
+    theme_classic() +
+    theme(legend.position = "right")
+}
+
+##############################################################################
+#### MARGINAL AND SCATTER PLOTS ####
+##############################################################################
+
+# Collect plot names in the order they should print, and accumulate spaghetti data
 plot_order <- character(0)
 spaghetti_pdp <- setNames(
   vector("list", length(outcomes)),
   vapply(outcomes, `[[`, "", "var")
 )
 
+# One pair of figures (marginal + scatter) per dataset × outcome
 for (dataset in datasets) {
   sweep_output <- readRDS(dataset$path)
   sweep_results <- sweep_output$results
@@ -361,9 +581,10 @@ for (dataset in datasets) {
       outcome_var,
       dataset_label
     )
+
+    # Scale progress to the focal sweep's duration so spaghetti axes match
     spaghetti_row <- pdp_data
     if (outcome_var == "total_scientific_progress") {
-      # Scale progress to the focal sweep's duration.
       spaghetti_row$y <- spaghetti_row$y *
         focal_n_timesteps / sweep_output$meta$base_params$n_timesteps
     }
@@ -395,6 +616,11 @@ for (dataset in datasets) {
   }
 }
 
+##############################################################################
+#### SPAGHETTI MARGINAL OVERLAYS ####
+##############################################################################
+
+# One overlay per outcome: all scenarios on the same (denormalized) axes
 for (outcome in outcomes) {
   outcome_var <- outcome$var
   outcome_label <- outcome$label
@@ -407,6 +633,11 @@ for (outcome in outcomes) {
   plot_order <- c(plot_order, spaghetti_name)
 }
 
+##############################################################################
+#### FOCAL BATCH STABILITY ####
+##############################################################################
+
+# Overlay each focal batch's marginal fit with the pooled-all-sims line
 if (length(focal_batch_files) > 0L) {
   focal_pooled <- readRDS(focal_path)
   focal_pooled_results <- focal_pooled$results
@@ -455,174 +686,11 @@ if (length(focal_batch_files) > 0L) {
   )
 }
 
-publication_bias_path <- here(
-  "R",
-  "manuscript_analyses",
-  "output",
-  "publication_bias_sweep",
-  "publication_bias_sweep.rds"
-)
+##############################################################################
+#### NULL-BIN HEATMAPS ####
+##############################################################################
 
-make_null_bin_heatmaps <- function(
-  sweep_results,
-  param_config,
-  outcome_var,
-  outcome_label,
-  title,
-  highlight_region = NULL
-) {
-  x_var <- "nonsig_logistic_midpoint"
-  y_var <- "hold_samples_constant_at"
-  null_labels <- c("0-0.33", "0.33-0.66", "0.66-1")
-
-  plot_data <- sweep_results |>
-    mutate(
-      null_bin = cut(
-        base_null_probability,
-        breaks = c(0, 1 / 3, 2 / 3, 1),
-        labels = null_labels,
-        include.lowest = TRUE
-      )
-    ) |>
-    filter(!is.na(null_bin), !is.na(.data[[outcome_var]]))
-
-  if (outcome_var == "mean_replication_rate") {
-    plot_data[[outcome_var]] <- 100 * plot_data[[outcome_var]]
-  }
-
-  highlight_df <- if (is.null(highlight_region)) {
-    NULL
-  } else {
-    data.frame(
-      null_bin = highlight_region$null_bins,
-      xmin = min(highlight_region$nonsig_logistic_midpoint),
-      xmax = max(highlight_region$nonsig_logistic_midpoint),
-      ymin = min(highlight_region$sample_size),
-      ymax = max(highlight_region$sample_size)
-    )
-  }
-
-  fill_limits <- if (outcome_var == "mean_replication_rate") {
-    c(0, 100)
-  } else {
-    range(plot_data[[outcome_var]], na.rm = TRUE)
-  }
-
-  heatmap_breaks <- list(
-    x = seq(param_config[[x_var]]$min, param_config[[x_var]]$max, length.out = 17),
-    y = seq(param_config[[y_var]]$min, param_config[[y_var]]$max, length.out = 17)
-  )
-
-  panels <- lapply(null_labels, function(lbl) {
-    panel_plot <- ggplot(
-      filter(plot_data, null_bin == lbl),
-      aes(
-        x = .data[[x_var]],
-        y = .data[[y_var]],
-        z = .data[[outcome_var]]
-      )
-    ) +
-      stat_summary_2d(
-        fun = function(z) mean(z, na.rm = TRUE),
-        breaks = heatmap_breaks
-      ) +
-      coord_cartesian(expand = FALSE) +
-      scale_fill_viridis_c(
-        option = "D",
-        limits = fill_limits,
-        oob = scales::squish
-      ) +
-      labs(
-        title = paste("Base null:", lbl),
-        x = param_config[[x_var]]$label,
-        y = param_config[[y_var]]$label,
-        fill = outcome_label
-      ) +
-      theme_classic()
-
-    panel_highlight <- if (is.null(highlight_df)) {
-      NULL
-    } else {
-      filter(highlight_df, null_bin == lbl)
-    }
-
-    if (!is.null(panel_highlight) && nrow(panel_highlight) > 0L) {
-      panel_plot <- panel_plot +
-        geom_rect(
-          data = panel_highlight,
-          aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
-          inherit.aes = FALSE,
-          color = "red",
-          fill = NA,
-          linewidth = 0.8,
-          linetype = "solid"
-        )
-    }
-
-    panel_plot
-  })
-
-  wrap_plots(panels, ncol = 3, guides = "collect") +
-    plot_annotation(title = title) &
-    theme(legend.position = "bottom")
-}
-
-make_publication_composition_plot <- function(sweep_results) {
-  composition_vars <- c(
-    pct_published_originals_sig = "Published originals that are significant",
-    pct_published_replications_sig = "Published replications that are significant",
-    pct_published_are_replications = "Published studies that are replications"
-  )
-
-  missing_vars <- setdiff(names(composition_vars), names(sweep_results))
-  if (length(missing_vars) > 0L) {
-    stop(
-      "Publication bias sweep is missing outcome columns: ",
-      paste(missing_vars, collapse = ", "),
-      "\nRe-run R/manuscript_analyses/publication_bias_sweep.R ",
-      "(delete publication_bias_sweep.rds first if it exists but is empty)."
-    )
-  }
-  if (nrow(sweep_results) == 0L) {
-    stop(
-      "Publication bias sweep has no rows. ",
-      "Re-run publication_bias_sweep.R after fixing base_params."
-    )
-  }
-
-  plot_data <- sweep_results |>
-    pivot_longer(
-      cols = all_of(names(composition_vars)),
-      names_to = "metric",
-      values_to = "pct"
-    ) |>
-    mutate(metric = composition_vars[metric])
-
-  ggplot(
-    plot_data,
-    aes(x = nonsig_logistic_midpoint, y = pct, color = metric)
-  ) +
-    geom_hline(yintercept = c(1, 96), linetype = "dotted", color = "black") +
-    geom_point(alpha = 0.25, size = 1.2) +
-    geom_smooth(method = "loess", se = FALSE, linewidth = 1.1, span = 0.75) +
-    scale_color_manual(
-      values = c(
-        "#0072B2",
-        "#D55E00",
-        "#009E73"
-      )
-    ) +
-    labs(
-      title = "Published literature composition vs publication bias",
-      x = "Publication bias parameter",
-      y = "Percent of studies",
-      color = NULL
-    ) +
-    scale_y_continuous(limits = c(0, 100)) +
-    theme_classic() +
-    theme(legend.position = "right")
-}
-
+# Sample size × publication bias, faceted by base-null third (focal sweep only)
 focal_for_heatmaps <- readRDS(focal_path)
 for (outcome in outcomes) {
   heatmap_name <- paste0("fig_heatmap_null_bins_", outcome$var)
@@ -640,6 +708,10 @@ for (outcome in outcomes) {
   )
   plot_order <- c(plot_order, heatmap_name)
 }
+
+##############################################################################
+#### PUBLICATION COMPOSITION ####
+##############################################################################
 
 if (file.exists(publication_bias_path)) {
   pub_bias_output <- readRDS(publication_bias_path)
@@ -660,10 +732,19 @@ if (file.exists(publication_bias_path)) {
   )
 }
 
+##############################################################################
+#### PRINT FIGURES ####
+##############################################################################
+
 for (plot_name in plot_order) {
   print(get(plot_name, envir = plot_env))
 }
 
+##############################################################################
+#### HIGHLIGHTED REGION SUMMARY ####
+##############################################################################
+
+# Restrict focal sims to the red boxes on the null-bin heatmaps
 highlight_sims <- focal_for_heatmaps$results |>
   mutate(
     null_bin = cut(
@@ -687,6 +768,7 @@ highlight_sims <- focal_for_heatmaps$results |>
     )
   )
 
+# Mean/sd/min/max for one outcome, by null bin and combined
 summarise_highlight_region <- function(data, var, outcome_label, as_proportion = FALSE) {
   vals <- if (as_proportion) 100 * data[[var]] else data[[var]]
   bind_rows(
@@ -753,6 +835,11 @@ cat(
 
 print(highlight_region_summary)
 
+##############################################################################
+#### MANUSCRIPT INLINE VALUES ####
+##############################################################################
+
+# Pull the two highlighted null-bin means for a manuscript inline value
 manuscript_highlight_null_bins <- function(summary, outcome_label) {
   bins <- summary |>
     filter(
@@ -782,18 +869,16 @@ manuscript_highlight_success_postpub <- manuscript_highlight_null_bins(
   "Replication success, post-publication (%)"
 )
 
-realistic_montecarlo_path <- here(
-  "R",
-  "manuscript_analyses",
-  "output",
-  "realistic_condition_montecarlo",
-  "realistic_condition_montecarlo.rds"
-)
-
+# Format a number as a percentage string for the manuscript
 manuscript_format_pct <- function(x, digits = 0) {
   paste0(format(round(x, digits), nsmall = digits, trim = TRUE), "%")
 }
 
+##############################################################################
+#### REALISTIC CONDITION MONTE CARLO ####
+##############################################################################
+
+# Monte Carlo summary (mean, sd, MCSE, ± 2*MCSE)
 monte_carlo_stats <- function(x, label, as_percent = FALSE) {
   if (as_percent) {
     x <- 100 * x
@@ -860,6 +945,7 @@ if (file.exists(realistic_montecarlo_path)) {
   }
   cat("\n")
 
+  # Store replicator-share stats for manuscript inline values
   rep_stats <- mc_summary[1, ]
   manuscript_stochastic_variability <- list(
     n_replicates = rep_stats$n,

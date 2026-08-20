@@ -9,6 +9,7 @@ library(here)
 library(foreach)
 library(doSNOW)
 
+# Source base parameters if not already done
 if (!exists("base_params")) {
   source(here("R", "03_set_sweep_parameters.R"))
 }
@@ -30,6 +31,7 @@ for (sweep_topup in seq_len(max_sweep_topups)) {
     if (length(missing_seeds) == 0L) {
       break # skip if no seeds are missing
     }
+    # Set sweep_params to only the missing seeds
     sweep_params <- sweep_params_full[
       sweep_params_full$seed %in% missing_seeds,
       ,
@@ -42,12 +44,15 @@ for (sweep_topup in seq_len(max_sweep_topups)) {
       " missing simulation seed/s."
     ))
   } else {
+    # Otherwise, use all seeds
     sweep_params <- sweep_params_full
   }
 
+  # Set up progress bar
   pb <- txtProgressBar(max = nrow(sweep_params), style = 3)
   progress <- function(n) setTxtProgressBar(pb, n)
 
+  # Run simulations
   results <- foreach(
     i = seq_len(nrow(sweep_params)),
     .combine = rbind,
@@ -64,8 +69,14 @@ for (sweep_topup in seq_len(max_sweep_topups)) {
         params[[nm]] <- sweep_params[[nm]][i]
       }
 
+      # Run simulation
       sim_env <- run_simulation(params, verbose = 0)
 
+      # -------------------------------------------------------
+      # Calculate and store metrics
+      # -------------------------------------------------------
+
+      # Calculate replicator share in last 50 timesteps
       window_start <- sim_env$n_timesteps - 50
       active_in_window <- which(
         !is.na(sim_env$agents[, "researcher_id"]) &
@@ -76,6 +87,8 @@ for (sweep_topup in seq_len(max_sweep_topups)) {
         active_in_window,
         "replication_probability"
       ])
+
+      # Calculate mean original publication status
       mean_original_published <- mean(
         sim_env$studies[
           sim_env$studies[, "study_type"] == 0,
@@ -83,6 +96,8 @@ for (sweep_topup in seq_len(max_sweep_topups)) {
         ],
         na.rm = TRUE
       )
+
+      # Calculate mean replication publication status
       mean_replication_published <- mean(
         sim_env$studies[
           sim_env$studies[, "study_type"] == 1,
@@ -131,7 +146,7 @@ for (sweep_topup in seq_len(max_sweep_topups)) {
         100 * mean(replication_success)
       }
 
-      # Percent of published replications that match their original
+      # Percent of only published replications that match their original
       published_replications <- replications[
         has_original,
         "publication_status"
@@ -146,6 +161,7 @@ for (sweep_topup in seq_len(max_sweep_topups)) {
       }
 
       # Calculating scientific progress
+      # Grab true and posterior effect size and variance from effects matrix
       has_effect_id <- !is.na(sim_env$effects[, "effect_id"])
       is_latest_update <- !duplicated(
         sim_env$effects[, "effect_id"],
@@ -161,6 +177,8 @@ for (sweep_topup in seq_len(max_sweep_topups)) {
       posterior_sd <- sqrt(studied_effects[, "posterior_effect_variance"])
       prior_mean <- sim_env$uninformed_prior_mean
       prior_sd <- sqrt(sim_env$uninformed_prior_variance)
+
+      # Calculate total scientific progress
       if (params$truth_contribution_method == "savage_dickey") {
         log_prior_at_true <- stats::dnorm(
           true_mean,
@@ -197,34 +215,41 @@ for (sweep_topup in seq_len(max_sweep_topups)) {
       )
       perc_resources_published <- 100 * published_timesteps / total_timesteps
 
+      # Calculate publication outcomes for originals and replications
+      # Grab all publishedstudies
       published_studies <- sim_env$studies[
         !is.na(sim_env$studies[, "study_id"]) &
           sim_env$studies[, "publication_status"] == 1,
         ,
         drop = FALSE
       ]
+      # Grab only published originals
       published_originals <- published_studies[
         published_studies[, "study_type"] == 0,
         ,
         drop = FALSE
       ]
+      # Grab only published replications
       published_replications <- published_studies[
         published_studies[, "study_type"] == 1,
         ,
         drop = FALSE
       ]
+      # Function to calculate percentage of studies that are significant
       pct_sig_among <- function(studies_subset) {
         if (nrow(studies_subset) == 0L) {
           return(NA_real_)
         }
         100 * mean(studies_subset[, "p_value"] < 0.05, na.rm = TRUE)
       }
+      # Calculate percentage of published originals that are significant
       pct_published_originals_sig <- pct_sig_among(published_originals)
       pct_published_originals_nonsig <- if (nrow(published_originals) == 0L) {
         NA_real_
       } else {
         100 * mean(published_originals[, "p_value"] >= 0.05, na.rm = TRUE)
       }
+      # Calculate percentage of published replications that are significant
       pct_published_replications_sig <- pct_sig_among(published_replications)
       pct_published_replications_nonsig <- if (
         nrow(published_replications) == 0L
@@ -233,6 +258,8 @@ for (sweep_topup in seq_len(max_sweep_topups)) {
       } else {
         100 * mean(published_replications[, "p_value"] >= 0.05, na.rm = TRUE)
       }
+      
+      # Calculate percentage of published studies that are replications
       pct_published_are_replications <- if (nrow(published_studies) == 0L) {
         NA_real_
       } else {

@@ -1,3 +1,9 @@
+##############################################################################
+# Speed test
+#
+# Description: Runs a single simulation under profvis to profile runtime.
+##############################################################################
+
 # ---- Load packages ----
 library(here)
 library(dplyr)

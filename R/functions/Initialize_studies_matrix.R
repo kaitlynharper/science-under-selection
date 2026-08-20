@@ -1,3 +1,7 @@
+##########################################################################
+# Initialize studies matrix
+##########################################################################
+
 #### Function: initialize_studies_matrix ####
 
 initialize_studies_matrix <- function(sim_env) {
