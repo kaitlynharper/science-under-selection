@@ -56,3 +56,6 @@ preregistration/
 
 # Manuscript folder
 manuscript/
+
+# anything starting with an underscore
+_*
