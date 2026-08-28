@@ -2,9 +2,9 @@ This repository holds an agent-based model of academia developed to explore the 
 
 **Authors**
 
-**Kaitlyn Harper** Postdoctoral researcher at the Department of Psychology, Ludwig-Maximilians-Universität (LMU) Munich. Uses agent-based models programmed in R to simulate academia and explore social and behavioural phenomena in metascience.
+**Kaitlyn Harper** Postdoctoral researcher at the Department of Psychology, Ludwig-Maximilians-Universität (LMU) Munich. Uses agent-based models programmed in R to simulate academia and explore social and behavioural phenomena in metascience. Personal website: kaitlynharper.com
 
-**Felix Schönbrodt** Professor at the Department of Psychology at LMU, Director of LMU Open Science Center, Principle Investigator of this project. Leads research on metascience, replicability, and statistics/methods. Personal website: https://www.nicebread.de/
+**Felix Schönbrodt** Professor at the Department of Psychology at LMU, Director of LMU Open Science Center, Principle Investigator of this project. Leads research on metascience, replicability, and statistics/methods. Personal website: nicebread.de
 
 ## Repository Structure
 
