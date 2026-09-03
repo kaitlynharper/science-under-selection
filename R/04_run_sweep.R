@@ -201,6 +201,12 @@ for (sweep_topup in seq_len(max_sweep_topups)) {
         total_scientific_progress <- sum(baseline_kl - current_kl)
       }
 
+      # Information gain: KL(latest posterior || uninformed prior),
+      # summed over studied effects (no comparison to truth)
+      total_information_gain <- sum(
+        kl_norm(posterior_mean, posterior_sd, prior_mean, prior_sd)
+      )
+
       # Calculating total resources (timesteps) that count towards published knowledge
       total_timesteps <- sum(
         sim_env$studies[, "timesteps_duration"],
@@ -282,6 +288,7 @@ for (sweep_topup in seq_len(max_sweep_topups)) {
       result_df$rep_success_prepub <- rep_success_prepub
       result_df$rep_success_postpub <- rep_success_postpub
       result_df$total_scientific_progress <- total_scientific_progress
+      result_df$total_information_gain <- total_information_gain
       result_df$perc_resources_published <- perc_resources_published
       result_df$pct_published_originals_sig <- pct_published_originals_sig
       result_df$pct_published_originals_nonsig <- pct_published_originals_nonsig

@@ -1,0 +1,64 @@
+---
+title: Sample size analyses
+format: pdf
+execute:
+  echo: false
+---
+
+```{r setup, include=FALSE}
+source(here::here("R", "sample_size_analyses", "sample_size_analyses.R"))
+```
+
+We start with the idea of how do we best spread X observations over studies? We found in our original model there was an "optimal" sample size for scientific progress such that we learnt enough about effects, but didn't waste observations. This was around n = 50 per group. For this study, we want to dig into that phenomenon further and explore it from different angles.
+
+# Pure Bayesian model
+
+My first thought is that we don't really need ABM, we can simply use Bayesian equations to determine at what point we get diminishing returns adding samples to a single effect (and therefore should distribute extra samples to new study instead). For this exploration, I'm using "absolute information gain", meaning the total that we learn (update our beliefs), without considering what the true effect is.
+
+```{r fig-bayesian-marginal}
+fig_bayesian_marginal
+```
+
+BUT I was naive about this, because it turns out you get diminishing returns immediately so a purely Bayesian approach would say absolute minimal sample size (like 2). So the Bayesian perspective is probably what was telling us "don't waste additional samples on one effect" in our model, but there must have been other dynamics pushing the optimal up from the absolute minumum. 
+
+# Simplified agent-based model
+
+So then, why did we see a n = 50 peak in our ABM? First, I wanted to make sure I could replicate the purely Bayesian pattern with our model. I ran a model with no replications, no evolution, no publication bias - just agents running original studies. 
+
+```{r fig-abm-no-pb}
+fig_abm_no_pb
+```
+
+These simulation results confirmed the pure Bayesian pattern, where information gain is maximised by using the lowest possible sample size (i.e. spreading observations across the most possible effects). 
+
+# Publication bias agent-based model
+
+Okay, so then I want to try and recreate the pattern from our previous study (optimal n = 50). The main thing I took out of the model is publication bias, so I put it back in and varied the non-significant midpoint parameter from -0.5 to 5.
+
+```{r fig-abm-pb-absolute}
+fig_abm_pb_absolute
+```
+
+When publication is at its lowest, we basically recreate the pure diminishing returns pattern (the lower sample size the better). But, as publication bias gets stronger we see a spike occuring a little above the lowest sample size. It's still not very high at all (maybe n = 5?), but it's shifted from the absolute minimum sample size. 
+
+So publication bias seems to slightly help us get back to a higher optimal n, probably because studies need enough power to detect true effects and therefore be significant and have a chance to contribute to information gain. I'm still surprised that the peak is so low here.
+
+```{r fig-abm-pb-truthful}
+fig_abm_pb_truthful
+```
+
+The final piece of the puzzle is to consider not just information gain, but truthful information gain (like in our original model). When we consider truthful information gain, first of all we see a bit y axis shift, especially for high publication bias and low sample sizes, where total progress is now negative (our beliefs about effects are getting less truthful on average). Secondly, we now see a spike that feels a bit more reasonable. With no publication bias, the spike appears to be around n = 10, and it gets closer toward that n = 50 point as publication bias gets higher. Overall, there tends to be either a spike or a point of diminising returns for sample sizes around n = 10-50.
+
+Remembering that our original model sample size n = 50 result is averaged across publication bias levels from -0.5 to 3, I'm still not quite sure if I've managed to recreate that pattern. What's missing from the model here is the evolution of replications. I would have to think about how replications might affect things, but I was actually hoping to avoid replications in this project (since dedicating n = 50 to an effect could be done by one study or by two studies of n = 25 that then get meta-analysed, it shouldn't make too much difference).
+
+Anyway, that's what I've been thinking through so far.
+
+Some questions/ideas for further exploration:
+
+- We've discussed the value of learning about null effects, should that evidence count less? maybe depending on the field? Now I'm wondering whether publication bias implicitly devalues that for us, since learning about null effects hardly makes it into the published literature, even if the study is very high-powered and precise. So publication bias is bad because it pushes our total scientific progress down a lot, but is part of that just accurately devaluing null effect learning?
+
+- Another thing to consider is whether it's possible to make the whole framework above more agnostic to actual sample sizes and effect sizes by instead framing it all in terms of power. This would be handy because then we wouldn't have to explicitly specify t-tests, cohen's d, etc (which is what we're currently working with), and the results could be applied more broadly by people applying an optimal power to whatever test they're planning to run
+
+- We've also talked about finding good measures of breadth and depth before. Having such measures (# of studied effects, average precision of effect estimates?, etc.) could be useful to help understand the patterns we've seen so far
+
+- We could develop a framework of breadth/depth outcomes so that a discipline (e.g., medicine) can decide what they value and therefore what the optimal spread of observations is for them
